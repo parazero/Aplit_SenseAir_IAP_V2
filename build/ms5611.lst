@@ -1,0 +1,1548 @@
+ARM GAS  C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s 			page 1
+
+
+   1              		.cpu cortex-m4
+   2              		.eabi_attribute 27, 1
+   3              		.eabi_attribute 28, 1
+   4              		.eabi_attribute 20, 1
+   5              		.eabi_attribute 21, 1
+   6              		.eabi_attribute 23, 3
+   7              		.eabi_attribute 24, 1
+   8              		.eabi_attribute 25, 1
+   9              		.eabi_attribute 26, 1
+  10              		.eabi_attribute 30, 1
+  11              		.eabi_attribute 34, 1
+  12              		.eabi_attribute 18, 4
+  13              		.file	"ms5611.c"
+  14              		.text
+  15              	.Ltext0:
+  16              		.cfi_sections	.debug_frame
+  17              		.section	.text.set_filter,"ax",%progbits
+  18              		.align	1
+  19              		.global	set_filter
+  20              		.syntax unified
+  21              		.thumb
+  22              		.thumb_func
+  23              		.fpu fpv4-sp-d16
+  25              	set_filter:
+  26              	.LFB124:
+  27              		.file 1 "Drivers/Perepheral_drivers/Src/ms5611.c"
+   1:Drivers/Perepheral_drivers/Src/ms5611.c **** #include "../../Perepheral_drivers/Inc/ms5611.h"
+   2:Drivers/Perepheral_drivers/Src/ms5611.c **** #include "includes.h"
+   3:Drivers/Perepheral_drivers/Src/ms5611.c **** #include <stdbool.h>
+   4:Drivers/Perepheral_drivers/Src/ms5611.c **** extern SPI_HandleTypeDef hspi2;
+   5:Drivers/Perepheral_drivers/Src/ms5611.c **** 
+   6:Drivers/Perepheral_drivers/Src/ms5611.c **** s64 t1;
+   7:Drivers/Perepheral_drivers/Src/ms5611.c **** s64 t2;
+   8:Drivers/Perepheral_drivers/Src/ms5611.c **** s64 ofs1;
+   9:Drivers/Perepheral_drivers/Src/ms5611.c **** s64 ofs2;
+  10:Drivers/Perepheral_drivers/Src/ms5611.c **** s64 sens1;
+  11:Drivers/Perepheral_drivers/Src/ms5611.c **** s64 sens2;
+  12:Drivers/Perepheral_drivers/Src/ms5611.c **** s64 aux;
+  13:Drivers/Perepheral_drivers/Src/ms5611.c **** s32 dt;
+  14:Drivers/Perepheral_drivers/Src/ms5611.c **** s32 raw_pressure;
+  15:Drivers/Perepheral_drivers/Src/ms5611.c **** s32 raw_temperature;
+  16:Drivers/Perepheral_drivers/Src/ms5611.c **** float iir_coeff;
+  17:Drivers/Perepheral_drivers/Src/ms5611.c **** float iir_diff_coeff;
+  18:Drivers/Perepheral_drivers/Src/ms5611.c **** float pressure;
+  19:Drivers/Perepheral_drivers/Src/ms5611.c **** float altitude;
+  20:Drivers/Perepheral_drivers/Src/ms5611.c **** float abs_neg_hgt;
+  21:Drivers/Perepheral_drivers/Src/ms5611.c **** float rel_neg_hgt;
+  22:Drivers/Perepheral_drivers/Src/ms5611.c **** float air_pressure;
+  23:Drivers/Perepheral_drivers/Src/ms5611.c **** float bias;
+  24:Drivers/Perepheral_drivers/Src/ms5611.c **** float init_neg_hgt;
+  25:Drivers/Perepheral_drivers/Src/ms5611.c **** u16 c1, c2, c3, c4, c5, c6;
+  26:Drivers/Perepheral_drivers/Src/ms5611.c **** s16 temperature;
+  27:Drivers/Perepheral_drivers/Src/ms5611.c **** bool pressure_sample;
+  28:Drivers/Perepheral_drivers/Src/ms5611.c **** //bool present;
+  29:Drivers/Perepheral_drivers/Src/ms5611.c **** //bool valid;
+  30:Drivers/Perepheral_drivers/Src/ms5611.c **** bool integrity;
+  31:Drivers/Perepheral_drivers/Src/ms5611.c **** u8 state_baro_counter;
+ARM GAS  C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s 			page 2
+
+
+  32:Drivers/Perepheral_drivers/Src/ms5611.c **** 
+  33:Drivers/Perepheral_drivers/Src/ms5611.c **** 
+  34:Drivers/Perepheral_drivers/Src/ms5611.c **** 
+  35:Drivers/Perepheral_drivers/Src/ms5611.c **** 
+  36:Drivers/Perepheral_drivers/Src/ms5611.c **** //float baro_buffer[10];
+  37:Drivers/Perepheral_drivers/Src/ms5611.c **** //#define baro_buffer_num   10
+  38:Drivers/Perepheral_drivers/Src/ms5611.c **** u8 exchange_Pres_num[8];
+  39:Drivers/Perepheral_drivers/Src/ms5611.c **** u8 exchange_Temp_num[8];
+  40:Drivers/Perepheral_drivers/Src/ms5611.c **** 
+  41:Drivers/Perepheral_drivers/Src/ms5611.c **** //cBARO_MS5611 g_baro;
+  42:Drivers/Perepheral_drivers/Src/ms5611.c **** //struct ms5611_t* p_ms5611;
+  43:Drivers/Perepheral_drivers/Src/ms5611.c **** u16 Cal_C[8];
+  44:Drivers/Perepheral_drivers/Src/ms5611.c **** u32 D1_Pres = 8442380, D2_Temp = 0;
+  45:Drivers/Perepheral_drivers/Src/ms5611.c **** float Pressure = 0;
+  46:Drivers/Perepheral_drivers/Src/ms5611.c **** float dT = 0, Temperature = 0, Temperature2 = 0;
+  47:Drivers/Perepheral_drivers/Src/ms5611.c **** double OFF = 0, SENS = 0;
+  48:Drivers/Perepheral_drivers/Src/ms5611.c **** 
+  49:Drivers/Perepheral_drivers/Src/ms5611.c **** static float aslRaw = 0;
+  50:Drivers/Perepheral_drivers/Src/ms5611.c **** static float aslAlpha = 0.95;
+  51:Drivers/Perepheral_drivers/Src/ms5611.c **** 
+  52:Drivers/Perepheral_drivers/Src/ms5611.c **** float aslZero = 0;
+  53:Drivers/Perepheral_drivers/Src/ms5611.c **** float asl = 0;
+  54:Drivers/Perepheral_drivers/Src/ms5611.c **** float vspeedAsl = 0;
+  55:Drivers/Perepheral_drivers/Src/ms5611.c **** 
+  56:Drivers/Perepheral_drivers/Src/ms5611.c **** float altitude = 0;
+  57:Drivers/Perepheral_drivers/Src/ms5611.c **** 
+  58:Drivers/Perepheral_drivers/Src/ms5611.c **** static struct ms5611_t *p_ms5611;
+  59:Drivers/Perepheral_drivers/Src/ms5611.c **** 
+  60:Drivers/Perepheral_drivers/Src/ms5611.c **** #define ERROR -1
+  61:Drivers/Perepheral_drivers/Src/ms5611.c **** #define SUCCESS 0
+  62:Drivers/Perepheral_drivers/Src/ms5611.c **** 
+  63:Drivers/Perepheral_drivers/Src/ms5611.c **** #define CMD_MS5611_ROM_C1 (0xA2)
+  64:Drivers/Perepheral_drivers/Src/ms5611.c **** #define CMD_MS5611_ROM_C2 (0xA4)
+  65:Drivers/Perepheral_drivers/Src/ms5611.c **** #define CMD_MS5611_ROM_C3 (0xA6)
+  66:Drivers/Perepheral_drivers/Src/ms5611.c **** #define CMD_MS5611_ROM_C4 (0xA8)
+  67:Drivers/Perepheral_drivers/Src/ms5611.c **** #define CMD_MS5611_ROM_C5 (0xAA)
+  68:Drivers/Perepheral_drivers/Src/ms5611.c **** #define CMD_MS5611_ROM_C6 (0xAC)
+  69:Drivers/Perepheral_drivers/Src/ms5611.c **** #define CMD_MS5611_ROM_CRC (0xAE)
+  70:Drivers/Perepheral_drivers/Src/ms5611.c **** #define CMD_MS5611_CONV_D1 (0x48)
+  71:Drivers/Perepheral_drivers/Src/ms5611.c **** #define CMD_MS5611_CONV_D2 (0x58)
+  72:Drivers/Perepheral_drivers/Src/ms5611.c **** 
+  73:Drivers/Perepheral_drivers/Src/ms5611.c **** #include "stm32f4xx.h"
+  74:Drivers/Perepheral_drivers/Src/ms5611.c **** #include "stm32f4xx_hal.h"
+  75:Drivers/Perepheral_drivers/Src/ms5611.c **** #include "stm32f4xx_hal_spi.h"
+  76:Drivers/Perepheral_drivers/Src/ms5611.c **** #include "stm32f4xx_hal_gpio.h"
+  77:Drivers/Perepheral_drivers/Src/ms5611.c **** #include <stdbool.h>
+  78:Drivers/Perepheral_drivers/Src/ms5611.c **** extern SPI_HandleTypeDef hspi2;
+  79:Drivers/Perepheral_drivers/Src/ms5611.c **** 
+  80:Drivers/Perepheral_drivers/Src/ms5611.c **** // Constant values for height calculations
+  81:Drivers/Perepheral_drivers/Src/ms5611.c **** 
+  82:Drivers/Perepheral_drivers/Src/ms5611.c **** #define RHO_15 (1.225f)
+  83:Drivers/Perepheral_drivers/Src/ms5611.c **** #define MF_G (9.80665f)
+  84:Drivers/Perepheral_drivers/Src/ms5611.c **** #define P_0 (1013.25f)
+  85:Drivers/Perepheral_drivers/Src/ms5611.c **** #define CMD_MS5611_RESET (0x1E)
+  86:Drivers/Perepheral_drivers/Src/ms5611.c **** #define CMD_MS5611_ROM_SETUP (0xA0)
+  87:Drivers/Perepheral_drivers/Src/ms5611.c **** #define CMD_MS5611_ROM_C1 (0xA2)
+  88:Drivers/Perepheral_drivers/Src/ms5611.c **** #define CMD_MS5611_ROM_C2 (0xA4)
+ARM GAS  C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s 			page 3
+
+
+  89:Drivers/Perepheral_drivers/Src/ms5611.c **** #define CMD_MS5611_ROM_C3 (0xA6)
+  90:Drivers/Perepheral_drivers/Src/ms5611.c **** #define CMD_MS5611_ROM_C4 (0xA8)
+  91:Drivers/Perepheral_drivers/Src/ms5611.c **** #define CMD_MS5611_ROM_C5 (0xAA)
+  92:Drivers/Perepheral_drivers/Src/ms5611.c **** #define CMD_MS5611_ROM_C6 (0xAC)
+  93:Drivers/Perepheral_drivers/Src/ms5611.c **** #define CMD_MS5611_ROM_CRC (0xAE)
+  94:Drivers/Perepheral_drivers/Src/ms5611.c **** #define CMD_MS5611_CONV_D1 (0x48)
+  95:Drivers/Perepheral_drivers/Src/ms5611.c **** #define CMD_MS5611_CONV_D2 (0x58)
+  96:Drivers/Perepheral_drivers/Src/ms5611.c **** #define EXTRA_PRECISION (5)
+  97:Drivers/Perepheral_drivers/Src/ms5611.c **** 
+  98:Drivers/Perepheral_drivers/Src/ms5611.c **** //void MS611_Write(uint8_t reg)
+  99:Drivers/Perepheral_drivers/Src/ms5611.c **** //{
+ 100:Drivers/Perepheral_drivers/Src/ms5611.c **** ////	ms5611_cs = 0;
+ 101:Drivers/Perepheral_drivers/Src/ms5611.c **** //	SPI2_ReadWriteByte(reg);
+ 102:Drivers/Perepheral_drivers/Src/ms5611.c **** ////	ms5611_cs = 1;
+ 103:Drivers/Perepheral_drivers/Src/ms5611.c **** //}
+ 104:Drivers/Perepheral_drivers/Src/ms5611.c **** 
+ 105:Drivers/Perepheral_drivers/Src/ms5611.c **** //uint8_t SPI2_ReadWriteByte(uint8_t TxData)
+ 106:Drivers/Perepheral_drivers/Src/ms5611.c **** //{
+ 107:Drivers/Perepheral_drivers/Src/ms5611.c **** //	uint8_t retry=0;
+ 108:Drivers/Perepheral_drivers/Src/ms5611.c **** //	uint8_t temp;
+ 109:Drivers/Perepheral_drivers/Src/ms5611.c **** //
+ 110:Drivers/Perepheral_drivers/Src/ms5611.c **** //	while(SPI_I2S_GetFlagStatus(SPI2, SPI_I2S_FLAG_TXE) == RESET)
+ 111:Drivers/Perepheral_drivers/Src/ms5611.c **** //	{
+ 112:Drivers/Perepheral_drivers/Src/ms5611.c **** //		retry++;
+ 113:Drivers/Perepheral_drivers/Src/ms5611.c **** //		if(retry>200) return 0;
+ 114:Drivers/Perepheral_drivers/Src/ms5611.c **** //	}
+ 115:Drivers/Perepheral_drivers/Src/ms5611.c **** //	SPI_SendData_MS(SPI2, TxData);
+ 116:Drivers/Perepheral_drivers/Src/ms5611.c **** //	retry=0;
+ 117:Drivers/Perepheral_drivers/Src/ms5611.c **** //
+ 118:Drivers/Perepheral_drivers/Src/ms5611.c **** //
+ 119:Drivers/Perepheral_drivers/Src/ms5611.c **** //
+ 120:Drivers/Perepheral_drivers/Src/ms5611.c **** //	while(SPI_I2S_GetFlagStatus(SPI2, SPI_I2S_FLAG_RXNE) == RESET)
+ 121:Drivers/Perepheral_drivers/Src/ms5611.c **** //	{
+ 122:Drivers/Perepheral_drivers/Src/ms5611.c **** //		retry++;
+ 123:Drivers/Perepheral_drivers/Src/ms5611.c **** //		if(retry>200) return 0;
+ 124:Drivers/Perepheral_drivers/Src/ms5611.c **** //	}
+ 125:Drivers/Perepheral_drivers/Src/ms5611.c **** //
+ 126:Drivers/Perepheral_drivers/Src/ms5611.c **** //	temp = SPI_I2S_ReceiveData(SPI2);
+ 127:Drivers/Perepheral_drivers/Src/ms5611.c **** //
+ 128:Drivers/Perepheral_drivers/Src/ms5611.c **** //	return temp;
+ 129:Drivers/Perepheral_drivers/Src/ms5611.c **** //}
+ 130:Drivers/Perepheral_drivers/Src/ms5611.c **** 
+ 131:Drivers/Perepheral_drivers/Src/ms5611.c **** void set_filter(float iir) {
+  28              		.loc 1 131 0
+  29              		.cfi_startproc
+  30              		@ args = 0, pretend = 0, frame = 0
+  31              		@ frame_needed = 0, uses_anonymous_args = 0
+  32              		@ link register save eliminated.
+  33              	.LVL0:
+ 132:Drivers/Perepheral_drivers/Src/ms5611.c **** 	iir_coeff = iir;
+  34              		.loc 1 132 0
+  35 0000 054B     		ldr	r3, .L2
+  36 0002 83ED000A 		vstr.32	s0, [r3]
+ 133:Drivers/Perepheral_drivers/Src/ms5611.c **** 	iir_diff_coeff = 1.0f - iir_coeff;
+  37              		.loc 1 133 0
+  38 0006 F7EE007A 		vmov.f32	s15, #1.0e+0
+  39 000a 37EEC00A 		vsub.f32	s0, s15, s0
+ARM GAS  C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s 			page 4
+
+
+  40              	.LVL1:
+  41 000e 034B     		ldr	r3, .L2+4
+  42 0010 83ED000A 		vstr.32	s0, [r3]
+  43 0014 7047     		bx	lr
+  44              	.L3:
+  45 0016 00BF     		.align	2
+  46              	.L2:
+  47 0018 00000000 		.word	iir_coeff
+  48 001c 00000000 		.word	iir_diff_coeff
+  49              		.cfi_endproc
+  50              	.LFE124:
+  52              		.section	.text.asl_fliter,"ax",%progbits
+  53              		.align	1
+  54              		.global	asl_fliter
+  55              		.syntax unified
+  56              		.thumb
+  57              		.thumb_func
+  58              		.fpu fpv4-sp-d16
+  60              	asl_fliter:
+  61              	.LFB128:
+ 134:Drivers/Perepheral_drivers/Src/ms5611.c **** }
+ 135:Drivers/Perepheral_drivers/Src/ms5611.c **** 
+ 136:Drivers/Perepheral_drivers/Src/ms5611.c **** 
+ 137:Drivers/Perepheral_drivers/Src/ms5611.c **** 
+ 138:Drivers/Perepheral_drivers/Src/ms5611.c **** static s8 SPI_SendData_MS(uint16_t gpio_pin, uint8_t* data, u8 size,
+ 139:Drivers/Perepheral_drivers/Src/ms5611.c **** 		uint32_t timeout) {
+ 140:Drivers/Perepheral_drivers/Src/ms5611.c **** 	s32 iError = 0;
+ 141:Drivers/Perepheral_drivers/Src/ms5611.c **** 	HAL_GPIO_WritePin(GPIOB, gpio_pin, GPIO_PIN_RESET);
+ 142:Drivers/Perepheral_drivers/Src/ms5611.c **** 	iError = HAL_SPI_Transmit(&hspi2, data, size, timeout);
+ 143:Drivers/Perepheral_drivers/Src/ms5611.c **** 	while (HAL_SPI_GetState(&hspi2) == HAL_SPI_STATE_BUSY)
+ 144:Drivers/Perepheral_drivers/Src/ms5611.c **** 		;
+ 145:Drivers/Perepheral_drivers/Src/ms5611.c **** 	HAL_GPIO_WritePin(GPIOB, gpio_pin, GPIO_PIN_SET);
+ 146:Drivers/Perepheral_drivers/Src/ms5611.c **** 	return (s8) iError;
+ 147:Drivers/Perepheral_drivers/Src/ms5611.c **** }
+ 148:Drivers/Perepheral_drivers/Src/ms5611.c **** 
+ 149:Drivers/Perepheral_drivers/Src/ms5611.c **** static s8 SPI_ReadData_MS(u16 gpio_pin, u8* data, u8 size, uint32_t timeout) {
+ 150:Drivers/Perepheral_drivers/Src/ms5611.c **** 	s32 iError = 0;
+ 151:Drivers/Perepheral_drivers/Src/ms5611.c **** 	HAL_GPIO_WritePin(GPIOB, gpio_pin, GPIO_PIN_RESET);
+ 152:Drivers/Perepheral_drivers/Src/ms5611.c **** 	iError = HAL_SPI_Receive(&hspi2, data, size, timeout);
+ 153:Drivers/Perepheral_drivers/Src/ms5611.c **** 	while (HAL_SPI_GetState(&hspi2) == HAL_SPI_STATE_BUSY)
+ 154:Drivers/Perepheral_drivers/Src/ms5611.c **** 		;
+ 155:Drivers/Perepheral_drivers/Src/ms5611.c **** 	HAL_GPIO_WritePin(GPIOB, gpio_pin, GPIO_PIN_SET);
+ 156:Drivers/Perepheral_drivers/Src/ms5611.c **** 	return (s8) iError;
+ 157:Drivers/Perepheral_drivers/Src/ms5611.c **** }
+ 158:Drivers/Perepheral_drivers/Src/ms5611.c **** 
+ 159:Drivers/Perepheral_drivers/Src/ms5611.c **** //uint16_t MS611_Read_16bit(uint8_t reg)
+ 160:Drivers/Perepheral_drivers/Src/ms5611.c **** //{
+ 161:Drivers/Perepheral_drivers/Src/ms5611.c **** //	uint8_t temp1, temp2;
+ 162:Drivers/Perepheral_drivers/Src/ms5611.c **** //	uint16_t value = 0;
+ 163:Drivers/Perepheral_drivers/Src/ms5611.c **** //
+ 164:Drivers/Perepheral_drivers/Src/ms5611.c **** //	ms5611_cs = 0;
+ 165:Drivers/Perepheral_drivers/Src/ms5611.c **** //	SPI2_ReadWriteByte(reg);
+ 166:Drivers/Perepheral_drivers/Src/ms5611.c **** //	temp1 = SPI2_ReadWriteByte(0x00);
+ 167:Drivers/Perepheral_drivers/Src/ms5611.c **** //	temp2 = SPI2_ReadWriteByte(0x00);
+ 168:Drivers/Perepheral_drivers/Src/ms5611.c **** //	ms5611_cs = 1;
+ 169:Drivers/Perepheral_drivers/Src/ms5611.c **** //
+ 170:Drivers/Perepheral_drivers/Src/ms5611.c **** //	value = (temp1<<8) + temp2;
+ARM GAS  C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s 			page 5
+
+
+ 171:Drivers/Perepheral_drivers/Src/ms5611.c **** //
+ 172:Drivers/Perepheral_drivers/Src/ms5611.c **** //	return value;
+ 173:Drivers/Perepheral_drivers/Src/ms5611.c **** //}
+ 174:Drivers/Perepheral_drivers/Src/ms5611.c **** 
+ 175:Drivers/Perepheral_drivers/Src/ms5611.c **** //uint32_t MS611_Read_24bit(uint8_t reg)
+ 176:Drivers/Perepheral_drivers/Src/ms5611.c **** //{
+ 177:Drivers/Perepheral_drivers/Src/ms5611.c **** //	uint8_t temp1, temp2, temp3;
+ 178:Drivers/Perepheral_drivers/Src/ms5611.c **** //	uint32_t value = 0;
+ 179:Drivers/Perepheral_drivers/Src/ms5611.c **** //
+ 180:Drivers/Perepheral_drivers/Src/ms5611.c **** //	ms5611_cs = 0;
+ 181:Drivers/Perepheral_drivers/Src/ms5611.c **** //	SPI2_ReadWriteByte(reg);
+ 182:Drivers/Perepheral_drivers/Src/ms5611.c **** //	temp1 = SPI2_ReadWriteByte(0x00);
+ 183:Drivers/Perepheral_drivers/Src/ms5611.c **** //	temp2 = SPI2_ReadWriteByte(0x00);
+ 184:Drivers/Perepheral_drivers/Src/ms5611.c **** //	temp3 = SPI2_ReadWriteByte(0x00);
+ 185:Drivers/Perepheral_drivers/Src/ms5611.c **** //	ms5611_cs = 1;
+ 186:Drivers/Perepheral_drivers/Src/ms5611.c **** //
+ 187:Drivers/Perepheral_drivers/Src/ms5611.c **** //	value = (temp1<<16) + (temp2<<8) + temp3;
+ 188:Drivers/Perepheral_drivers/Src/ms5611.c **** //
+ 189:Drivers/Perepheral_drivers/Src/ms5611.c **** //	return value;
+ 190:Drivers/Perepheral_drivers/Src/ms5611.c **** //}
+ 191:Drivers/Perepheral_drivers/Src/ms5611.c **** 
+ 192:Drivers/Perepheral_drivers/Src/ms5611.c **** //void MS561101BA_READ(struct ms5611_t *ms5611) {
+ 193:Drivers/Perepheral_drivers/Src/ms5611.c **** //	u16 data_u16 = MS5611_INIT_VALUE;
+ 194:Drivers/Perepheral_drivers/Src/ms5611.c **** //	u8 data_u8 = MS5611_INIT_VALUE;
+ 195:Drivers/Perepheral_drivers/Src/ms5611.c **** //	ms5611->MS5611_BUS_READ_FUNC_REG16
+ 196:Drivers/Perepheral_drivers/Src/ms5611.c **** //	(ms5611->dev_addr,
+ 197:Drivers/Perepheral_drivers/Src/ms5611.c **** //			0xA2, &data_u16, MS5611_GEN_READ_WRITE_LENGTH);
+ 198:Drivers/Perepheral_drivers/Src/ms5611.c **** //	HAL_Delay(5);
+ 199:Drivers/Perepheral_drivers/Src/ms5611.c **** //	ms5611->MS5611_BUS_WRITE_FUNC
+ 200:Drivers/Perepheral_drivers/Src/ms5611.c **** //	(ms5611->dev_addr,
+ 201:Drivers/Perepheral_drivers/Src/ms5611.c **** //			CMD_MS5611_CONV_D2, &data_u8, MS5611_GEN_READ_WRITE_LENGTH);
+ 202:Drivers/Perepheral_drivers/Src/ms5611.c **** //	HAL_Delay(11);
+ 203:Drivers/Perepheral_drivers/Src/ms5611.c **** //
+ 204:Drivers/Perepheral_drivers/Src/ms5611.c **** //	for (int i = 0; i < 50; i++) {
+ 205:Drivers/Perepheral_drivers/Src/ms5611.c **** //		ms5611_update(ms5611);
+ 206:Drivers/Perepheral_drivers/Src/ms5611.c **** //		HAL_Delay(11);
+ 207:Drivers/Perepheral_drivers/Src/ms5611.c **** //	}
+ 208:Drivers/Perepheral_drivers/Src/ms5611.c **** //
+ 209:Drivers/Perepheral_drivers/Src/ms5611.c **** //	ms5611_calculate();
+ 210:Drivers/Perepheral_drivers/Src/ms5611.c **** //}
+ 211:Drivers/Perepheral_drivers/Src/ms5611.c **** 
+ 212:Drivers/Perepheral_drivers/Src/ms5611.c **** //#define ms5611_updatemode 0
+ 213:Drivers/Perepheral_drivers/Src/ms5611.c **** 
+ 214:Drivers/Perepheral_drivers/Src/ms5611.c **** void update(void) {
+ 215:Drivers/Perepheral_drivers/Src/ms5611.c **** 	if (pressure_sample) {
+ 216:Drivers/Perepheral_drivers/Src/ms5611.c **** 		raw_pressure = spi_read24();
+ 217:Drivers/Perepheral_drivers/Src/ms5611.c **** 		pressure = (float) (((double) raw_pressure * (double) sens1 / 2097152.0
+ 218:Drivers/Perepheral_drivers/Src/ms5611.c **** 				- (double) ofs1) / 32768.0 / 100.0);
+ 219:Drivers/Perepheral_drivers/Src/ms5611.c **** 		air_pressure = air_pressure * iir_coeff + pressure * iir_diff_coeff;
+ 220:Drivers/Perepheral_drivers/Src/ms5611.c **** 		abs_neg_hgt = 100.0f * P_0 / (RHO_15 * MF_G) * logf(air_pressure / P_0);
+ 221:Drivers/Perepheral_drivers/Src/ms5611.c **** 		rel_neg_hgt = abs_neg_hgt - init_neg_hgt;
+ 222:Drivers/Perepheral_drivers/Src/ms5611.c **** 		altitude = -rel_neg_hgt;
+ 223:Drivers/Perepheral_drivers/Src/ms5611.c **** 		p_ms5611->valid = (pressure > 450.0f) && (pressure < 1200.0f);
+ 224:Drivers/Perepheral_drivers/Src/ms5611.c **** 		pressure_sample = false;
+ 225:Drivers/Perepheral_drivers/Src/ms5611.c **** 		u8 data_u8 = 0;
+ 226:Drivers/Perepheral_drivers/Src/ms5611.c **** 		p_ms5611->MS5611_BUS_WRITE_FUNC (p_ms5611->dev_addr, CMD_MS5611_CONV_D2, &data_u8, MS5611_GEN_REA
+ 227:Drivers/Perepheral_drivers/Src/ms5611.c **** 	} else {
+ARM GAS  C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s 			page 6
+
+
+ 228:Drivers/Perepheral_drivers/Src/ms5611.c **** 		raw_temperature = spi_read24();
+ 229:Drivers/Perepheral_drivers/Src/ms5611.c **** 		dt = raw_temperature - ((long) c5 * 256);
+ 230:Drivers/Perepheral_drivers/Src/ms5611.c **** 		t1 = 2000 + (s64) dt * (s64) c6 / 8388608;
+ 231:Drivers/Perepheral_drivers/Src/ms5611.c **** 		ofs1 = (s64) c2 * 65536 + ((s64) c4 * (s64) dt) / 128;
+ 232:Drivers/Perepheral_drivers/Src/ms5611.c **** 		sens1 = (s64) c1 * 32768 + ((s64) c3 * (s64) dt) / 256;
+ 233:Drivers/Perepheral_drivers/Src/ms5611.c **** 		if (t1 < 2000) {
+ 234:Drivers/Perepheral_drivers/Src/ms5611.c **** 			t2 = (((s64) dt) * dt) >> 31;
+ 235:Drivers/Perepheral_drivers/Src/ms5611.c **** 			aux = (t1 - 2000) * (t1 - 2000);
+ 236:Drivers/Perepheral_drivers/Src/ms5611.c **** 			ofs2 = (5 * aux) >> 1;
+ 237:Drivers/Perepheral_drivers/Src/ms5611.c **** 			sens2 = (5 * aux) >> 2;
+ 238:Drivers/Perepheral_drivers/Src/ms5611.c **** 			t1 = t1 - t2;
+ 239:Drivers/Perepheral_drivers/Src/ms5611.c **** 			ofs1 = ofs1 - ofs2;
+ 240:Drivers/Perepheral_drivers/Src/ms5611.c **** 			sens1 = sens1 - sens2;
+ 241:Drivers/Perepheral_drivers/Src/ms5611.c **** 		}
+ 242:Drivers/Perepheral_drivers/Src/ms5611.c **** 		temperature = (s16) t1;
+ 243:Drivers/Perepheral_drivers/Src/ms5611.c **** 		pressure_sample = true;
+ 244:Drivers/Perepheral_drivers/Src/ms5611.c **** 		u8 data_u8 = 0;
+ 245:Drivers/Perepheral_drivers/Src/ms5611.c **** 		p_ms5611->MS5611_BUS_WRITE_FUNC (p_ms5611->dev_addr, CMD_MS5611_CONV_D1, &data_u8, MS5611_GEN_REA
+ 246:Drivers/Perepheral_drivers/Src/ms5611.c **** 	}
+ 247:Drivers/Perepheral_drivers/Src/ms5611.c **** }
+ 248:Drivers/Perepheral_drivers/Src/ms5611.c **** 
+ 249:Drivers/Perepheral_drivers/Src/ms5611.c **** void asl_fliter(void) {
+  62              		.loc 1 249 0
+  63              		.cfi_startproc
+  64              		@ args = 0, pretend = 0, frame = 0
+  65              		@ frame_needed = 0, uses_anonymous_args = 0
+  66              		@ link register save eliminated.
+ 250:Drivers/Perepheral_drivers/Src/ms5611.c **** 	asl = asl * aslAlpha + aslRaw * (1 - aslAlpha);
+  67              		.loc 1 250 0
+  68 0000 0A4B     		ldr	r3, .L5
+  69 0002 D3ED007A 		vldr.32	s15, [r3]
+  70 0006 9FED0A7A 		vldr.32	s14, .L5+4
+  71 000a 67EE877A 		vmul.f32	s15, s15, s14
+  72 000e 9FED097A 		vldr.32	s14, .L5+8
+  73 0012 77EE877A 		vadd.f32	s15, s15, s14
+  74 0016 C3ED007A 		vstr.32	s15, [r3]
+ 251:Drivers/Perepheral_drivers/Src/ms5611.c **** 	altitude = asl - aslZero;
+  75              		.loc 1 251 0
+  76 001a 074B     		ldr	r3, .L5+12
+  77 001c 93ED007A 		vldr.32	s14, [r3]
+  78 0020 77EEC77A 		vsub.f32	s15, s15, s14
+  79 0024 054B     		ldr	r3, .L5+16
+  80 0026 C3ED007A 		vstr.32	s15, [r3]
+  81 002a 7047     		bx	lr
+  82              	.L6:
+  83              		.align	2
+  84              	.L5:
+  85 002c 00000000 		.word	.LANCHOR0
+  86 0030 3333733F 		.word	1064514355
+  87 0034 00000000 		.word	0
+  88 0038 00000000 		.word	.LANCHOR1
+  89 003c 00000000 		.word	.LANCHOR2
+  90              		.cfi_endproc
+  91              	.LFE128:
+  93              		.section	.text.MS561101BA_RESET,"ax",%progbits
+  94              		.align	1
+  95              		.global	MS561101BA_RESET
+ARM GAS  C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s 			page 7
+
+
+  96              		.syntax unified
+  97              		.thumb
+  98              		.thumb_func
+  99              		.fpu fpv4-sp-d16
+ 101              	MS561101BA_RESET:
+ 102              	.LFB129:
+ 252:Drivers/Perepheral_drivers/Src/ms5611.c **** }
+ 253:Drivers/Perepheral_drivers/Src/ms5611.c **** 
+ 254:Drivers/Perepheral_drivers/Src/ms5611.c **** void MS561101BA_RESET(struct ms5611_t *ms5611) {
+ 103              		.loc 1 254 0
+ 104              		.cfi_startproc
+ 105              		@ args = 0, pretend = 0, frame = 8
+ 106              		@ frame_needed = 0, uses_anonymous_args = 0
+ 107              	.LVL2:
+ 108 0000 10B5     		push	{r4, lr}
+ 109              	.LCFI0:
+ 110              		.cfi_def_cfa_offset 8
+ 111              		.cfi_offset 4, -8
+ 112              		.cfi_offset 14, -4
+ 113 0002 82B0     		sub	sp, sp, #8
+ 114              	.LCFI1:
+ 115              		.cfi_def_cfa_offset 16
+ 255:Drivers/Perepheral_drivers/Src/ms5611.c **** 	u8 data_u8 = MS5611_INIT_VALUE;
+ 116              		.loc 1 255 0
+ 117 0004 02AA     		add	r2, sp, #8
+ 118 0006 0023     		movs	r3, #0
+ 119 0008 02F8013D 		strb	r3, [r2, #-1]!
+ 256:Drivers/Perepheral_drivers/Src/ms5611.c **** 	ms5611->MS5611_BUS_WRITE_FUNC
+ 120              		.loc 1 256 0
+ 121 000c C469     		ldr	r4, [r0, #28]
+ 122 000e 0123     		movs	r3, #1
+ 123 0010 1E21     		movs	r1, #30
+ 124 0012 008B     		ldrh	r0, [r0, #24]
+ 125              	.LVL3:
+ 126 0014 A047     		blx	r4
+ 127              	.LVL4:
+ 257:Drivers/Perepheral_drivers/Src/ms5611.c **** 	(ms5611->dev_addr,
+ 258:Drivers/Perepheral_drivers/Src/ms5611.c **** 			MS561101BA_RST, &data_u8, MS5611_GEN_READ_WRITE_LENGTH);
+ 259:Drivers/Perepheral_drivers/Src/ms5611.c **** }
+ 128              		.loc 1 259 0
+ 129 0016 02B0     		add	sp, sp, #8
+ 130              	.LCFI2:
+ 131              		.cfi_def_cfa_offset 8
+ 132              		@ sp needed
+ 133 0018 10BD     		pop	{r4, pc}
+ 134              		.cfi_endproc
+ 135              	.LFE129:
+ 137              		.section	.text.transfer,"ax",%progbits
+ 138              		.align	1
+ 139              		.global	transfer
+ 140              		.syntax unified
+ 141              		.thumb
+ 142              		.thumb_func
+ 143              		.fpu fpv4-sp-d16
+ 145              	transfer:
+ 146              	.LFB130:
+ 260:Drivers/Perepheral_drivers/Src/ms5611.c **** 
+ARM GAS  C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s 			page 8
+
+
+ 261:Drivers/Perepheral_drivers/Src/ms5611.c **** #define SPI_BUFFER_LEN 5
+ 262:Drivers/Perepheral_drivers/Src/ms5611.c **** 
+ 263:Drivers/Perepheral_drivers/Src/ms5611.c **** u8 transfer(u8 byte) {
+ 147              		.loc 1 263 0
+ 148              		.cfi_startproc
+ 149              		@ args = 0, pretend = 0, frame = 0
+ 150              		@ frame_needed = 0, uses_anonymous_args = 0
+ 151              		@ link register save eliminated.
+ 152              	.LVL5:
+ 264:Drivers/Perepheral_drivers/Src/ms5611.c **** 	hspi2.Instance->DR = byte;
+ 153              		.loc 1 264 0
+ 154 0000 044B     		ldr	r3, .L11
+ 155 0002 1A68     		ldr	r2, [r3]
+ 156 0004 D060     		str	r0, [r2, #12]
+ 157              	.L10:
+ 265:Drivers/Perepheral_drivers/Src/ms5611.c **** 	while (!(hspi2.Instance->SR & 1)) {
+ 158              		.loc 1 265 0 discriminator 1
+ 159 0006 9368     		ldr	r3, [r2, #8]
+ 160 0008 13F0010F 		tst	r3, #1
+ 161 000c FBD0     		beq	.L10
+ 266:Drivers/Perepheral_drivers/Src/ms5611.c **** 	}
+ 267:Drivers/Perepheral_drivers/Src/ms5611.c **** 	return ((u8) hspi2.Instance->DR);
+ 162              		.loc 1 267 0
+ 163 000e D068     		ldr	r0, [r2, #12]
+ 164              	.LVL6:
+ 268:Drivers/Perepheral_drivers/Src/ms5611.c **** }
+ 165              		.loc 1 268 0
+ 166 0010 C0B2     		uxtb	r0, r0
+ 167 0012 7047     		bx	lr
+ 168              	.L12:
+ 169              		.align	2
+ 170              	.L11:
+ 171 0014 00000000 		.word	hspi2
+ 172              		.cfi_endproc
+ 173              	.LFE130:
+ 175              		.section	.text.spi_read24,"ax",%progbits
+ 176              		.align	1
+ 177              		.global	spi_read24
+ 178              		.syntax unified
+ 179              		.thumb
+ 180              		.thumb_func
+ 181              		.fpu fpv4-sp-d16
+ 183              	spi_read24:
+ 184              	.LFB131:
+ 269:Drivers/Perepheral_drivers/Src/ms5611.c **** 
+ 270:Drivers/Perepheral_drivers/Src/ms5611.c **** u32 spi_read24(void)
+ 271:Drivers/Perepheral_drivers/Src/ms5611.c **** {
+ 185              		.loc 1 271 0
+ 186              		.cfi_startproc
+ 187              		@ args = 0, pretend = 0, frame = 0
+ 188              		@ frame_needed = 0, uses_anonymous_args = 0
+ 189 0000 F8B5     		push	{r3, r4, r5, r6, r7, lr}
+ 190              	.LCFI3:
+ 191              		.cfi_def_cfa_offset 24
+ 192              		.cfi_offset 3, -24
+ 193              		.cfi_offset 4, -20
+ 194              		.cfi_offset 5, -16
+ARM GAS  C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s 			page 9
+
+
+ 195              		.cfi_offset 6, -12
+ 196              		.cfi_offset 7, -8
+ 197              		.cfi_offset 14, -4
+ 272:Drivers/Perepheral_drivers/Src/ms5611.c ****   u8 b0,b1,b2;
+ 273:Drivers/Perepheral_drivers/Src/ms5611.c ****   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
+ 198              		.loc 1 273 0
+ 199 0002 104D     		ldr	r5, .L15
+ 200 0004 0022     		movs	r2, #0
+ 201 0006 4FF40051 		mov	r1, #8192
+ 202 000a 2846     		mov	r0, r5
+ 203 000c FFF7FEFF 		bl	HAL_GPIO_WritePin
+ 204              	.LVL7:
+ 274:Drivers/Perepheral_drivers/Src/ms5611.c **** //  GPIO_13_CLR(GPIOC);
+ 275:Drivers/Perepheral_drivers/Src/ms5611.c ****   transfer(0x00);
+ 205              		.loc 1 275 0
+ 206 0010 0020     		movs	r0, #0
+ 207 0012 FFF7FEFF 		bl	transfer
+ 208              	.LVL8:
+ 276:Drivers/Perepheral_drivers/Src/ms5611.c ****   b2=transfer(0);
+ 209              		.loc 1 276 0
+ 210 0016 0020     		movs	r0, #0
+ 211 0018 FFF7FEFF 		bl	transfer
+ 212              	.LVL9:
+ 213 001c 0746     		mov	r7, r0
+ 214              	.LVL10:
+ 277:Drivers/Perepheral_drivers/Src/ms5611.c ****   b1=transfer(0);
+ 215              		.loc 1 277 0
+ 216 001e 0020     		movs	r0, #0
+ 217 0020 FFF7FEFF 		bl	transfer
+ 218              	.LVL11:
+ 219 0024 0446     		mov	r4, r0
+ 220              	.LVL12:
+ 278:Drivers/Perepheral_drivers/Src/ms5611.c ****   b0=transfer(0);
+ 221              		.loc 1 278 0
+ 222 0026 0020     		movs	r0, #0
+ 223 0028 FFF7FEFF 		bl	transfer
+ 224              	.LVL13:
+ 225 002c 0646     		mov	r6, r0
+ 226              	.LVL14:
+ 279:Drivers/Perepheral_drivers/Src/ms5611.c ****   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
+ 227              		.loc 1 279 0
+ 228 002e 0122     		movs	r2, #1
+ 229 0030 4FF40051 		mov	r1, #8192
+ 230 0034 2846     		mov	r0, r5
+ 231 0036 FFF7FEFF 		bl	HAL_GPIO_WritePin
+ 232              	.LVL15:
+ 280:Drivers/Perepheral_drivers/Src/ms5611.c **** //  GPIO_13_SET(GPIOC);
+ 281:Drivers/Perepheral_drivers/Src/ms5611.c ****   return(((u32)b2)<<16)|(((u32)b1)<<8)|(b0);
+ 233              		.loc 1 281 0
+ 234 003a 2002     		lsls	r0, r4, #8
+ 235 003c 40EA0740 		orr	r0, r0, r7, lsl #16
+ 282:Drivers/Perepheral_drivers/Src/ms5611.c **** }
+ 236              		.loc 1 282 0
+ 237 0040 3043     		orrs	r0, r0, r6
+ 238 0042 F8BD     		pop	{r3, r4, r5, r6, r7, pc}
+ 239              	.LVL16:
+ 240              	.L16:
+ARM GAS  C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s 			page 10
+
+
+ 241              		.align	2
+ 242              	.L15:
+ 243 0044 00080240 		.word	1073874944
+ 244              		.cfi_endproc
+ 245              	.LFE131:
+ 247              		.global	__aeabi_i2d
+ 248              		.global	__aeabi_l2d
+ 249              		.global	__aeabi_dmul
+ 250              		.global	__aeabi_dsub
+ 251              		.global	__aeabi_ddiv
+ 252              		.global	__aeabi_d2f
+ 253              		.section	.text.update,"ax",%progbits
+ 254              		.align	1
+ 255              		.global	update
+ 256              		.syntax unified
+ 257              		.thumb
+ 258              		.thumb_func
+ 259              		.fpu fpv4-sp-d16
+ 261              	update:
+ 262              	.LFB127:
+ 214:Drivers/Perepheral_drivers/Src/ms5611.c **** 	if (pressure_sample) {
+ 263              		.loc 1 214 0
+ 264              		.cfi_startproc
+ 265              		@ args = 0, pretend = 0, frame = 24
+ 266              		@ frame_needed = 0, uses_anonymous_args = 0
+ 267 0000 2DE9F04F 		push	{r4, r5, r6, r7, r8, r9, r10, fp, lr}
+ 268              	.LCFI4:
+ 269              		.cfi_def_cfa_offset 36
+ 270              		.cfi_offset 4, -36
+ 271              		.cfi_offset 5, -32
+ 272              		.cfi_offset 6, -28
+ 273              		.cfi_offset 7, -24
+ 274              		.cfi_offset 8, -20
+ 275              		.cfi_offset 9, -16
+ 276              		.cfi_offset 10, -12
+ 277              		.cfi_offset 11, -8
+ 278              		.cfi_offset 14, -4
+ 279 0004 87B0     		sub	sp, sp, #28
+ 280              	.LCFI5:
+ 281              		.cfi_def_cfa_offset 64
+ 215:Drivers/Perepheral_drivers/Src/ms5611.c **** 		raw_pressure = spi_read24();
+ 282              		.loc 1 215 0
+ 283 0006 B04B     		ldr	r3, .L34
+ 284 0008 1B78     		ldrb	r3, [r3]	@ zero_extendqisi2
+ 285 000a 002B     		cmp	r3, #0
+ 286 000c 00F08480 		beq	.L18
+ 287              	.LBB2:
+ 216:Drivers/Perepheral_drivers/Src/ms5611.c **** 		pressure = (float) (((double) raw_pressure * (double) sens1 / 2097152.0
+ 288              		.loc 1 216 0
+ 289 0010 FFF7FEFF 		bl	spi_read24
+ 290              	.LVL17:
+ 291 0014 AD4B     		ldr	r3, .L34+4
+ 292 0016 1860     		str	r0, [r3]
+ 217:Drivers/Perepheral_drivers/Src/ms5611.c **** 				- (double) ofs1) / 32768.0 / 100.0);
+ 293              		.loc 1 217 0
+ 294 0018 FFF7FEFF 		bl	__aeabi_i2d
+ 295              	.LVL18:
+ARM GAS  C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s 			page 11
+
+
+ 296 001c 0446     		mov	r4, r0
+ 297 001e 0D46     		mov	r5, r1
+ 298 0020 AB4B     		ldr	r3, .L34+8
+ 299 0022 D3E90001 		ldrd	r0, [r3]
+ 300 0026 FFF7FEFF 		bl	__aeabi_l2d
+ 301              	.LVL19:
+ 302 002a 0246     		mov	r2, r0
+ 303 002c 0B46     		mov	r3, r1
+ 304 002e 2046     		mov	r0, r4
+ 305 0030 2946     		mov	r1, r5
+ 306 0032 FFF7FEFF 		bl	__aeabi_dmul
+ 307              	.LVL20:
+ 308 0036 0022     		movs	r2, #0
+ 309 0038 A64B     		ldr	r3, .L34+12
+ 310 003a FFF7FEFF 		bl	__aeabi_dmul
+ 311              	.LVL21:
+ 312 003e 0446     		mov	r4, r0
+ 313 0040 0D46     		mov	r5, r1
+ 218:Drivers/Perepheral_drivers/Src/ms5611.c **** 		air_pressure = air_pressure * iir_coeff + pressure * iir_diff_coeff;
+ 314              		.loc 1 218 0
+ 315 0042 A54B     		ldr	r3, .L34+16
+ 316 0044 D3E90001 		ldrd	r0, [r3]
+ 317 0048 FFF7FEFF 		bl	__aeabi_l2d
+ 318              	.LVL22:
+ 319 004c 0246     		mov	r2, r0
+ 320 004e 0B46     		mov	r3, r1
+ 321 0050 2046     		mov	r0, r4
+ 322 0052 2946     		mov	r1, r5
+ 323 0054 FFF7FEFF 		bl	__aeabi_dsub
+ 324              	.LVL23:
+ 325 0058 0022     		movs	r2, #0
+ 326 005a 4FF07C53 		mov	r3, #1056964608
+ 327 005e FFF7FEFF 		bl	__aeabi_dmul
+ 328              	.LVL24:
+ 329 0062 0022     		movs	r2, #0
+ 330 0064 9D4B     		ldr	r3, .L34+20
+ 331 0066 FFF7FEFF 		bl	__aeabi_ddiv
+ 332              	.LVL25:
+ 217:Drivers/Perepheral_drivers/Src/ms5611.c **** 				- (double) ofs1) / 32768.0 / 100.0);
+ 333              		.loc 1 217 0
+ 334 006a FFF7FEFF 		bl	__aeabi_d2f
+ 335              	.LVL26:
+ 336 006e 07EE100A 		vmov	s14, r0
+ 337 0072 9B4C     		ldr	r4, .L34+24
+ 338 0074 2060     		str	r0, [r4]	@ float
+ 219:Drivers/Perepheral_drivers/Src/ms5611.c **** 		abs_neg_hgt = 100.0f * P_0 / (RHO_15 * MF_G) * logf(air_pressure / P_0);
+ 339              		.loc 1 219 0
+ 340 0076 9B4B     		ldr	r3, .L34+28
+ 341 0078 D3ED007A 		vldr.32	s15, [r3]
+ 342 007c 9A4A     		ldr	r2, .L34+32
+ 343 007e 92ED000A 		vldr.32	s0, [r2]
+ 344 0082 67EE807A 		vmul.f32	s15, s15, s0
+ 345 0086 994A     		ldr	r2, .L34+36
+ 346 0088 92ED000A 		vldr.32	s0, [r2]
+ 347 008c 27EE007A 		vmul.f32	s14, s14, s0
+ 348 0090 77EE877A 		vadd.f32	s15, s15, s14
+ 349 0094 C3ED007A 		vstr.32	s15, [r3]
+ARM GAS  C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s 			page 12
+
+
+ 220:Drivers/Perepheral_drivers/Src/ms5611.c **** 		rel_neg_hgt = abs_neg_hgt - init_neg_hgt;
+ 350              		.loc 1 220 0
+ 351 0098 9FED950A 		vldr.32	s0, .L34+40
+ 352 009c 87EE800A 		vdiv.f32	s0, s15, s0
+ 353 00a0 FFF7FEFF 		bl	logf
+ 354              	.LVL27:
+ 355 00a4 DFED937A 		vldr.32	s15, .L34+44
+ 356 00a8 20EE270A 		vmul.f32	s0, s0, s15
+ 357 00ac 924B     		ldr	r3, .L34+48
+ 358 00ae 83ED000A 		vstr.32	s0, [r3]
+ 221:Drivers/Perepheral_drivers/Src/ms5611.c **** 		altitude = -rel_neg_hgt;
+ 359              		.loc 1 221 0
+ 360 00b2 924B     		ldr	r3, .L34+52
+ 361 00b4 D3ED007A 		vldr.32	s15, [r3]
+ 362 00b8 30EE670A 		vsub.f32	s0, s0, s15
+ 363 00bc 904B     		ldr	r3, .L34+56
+ 364 00be 83ED000A 		vstr.32	s0, [r3]
+ 222:Drivers/Perepheral_drivers/Src/ms5611.c **** 		p_ms5611->valid = (pressure > 450.0f) && (pressure < 1200.0f);
+ 365              		.loc 1 222 0
+ 366 00c2 B1EE400A 		vneg.f32	s0, s0
+ 367 00c6 8F4B     		ldr	r3, .L34+60
+ 368 00c8 83ED000A 		vstr.32	s0, [r3]
+ 223:Drivers/Perepheral_drivers/Src/ms5611.c **** 		pressure_sample = false;
+ 369              		.loc 1 223 0
+ 370 00cc 8E4B     		ldr	r3, .L34+64
+ 371 00ce 1868     		ldr	r0, [r3]
+ 372 00d0 D4ED007A 		vldr.32	s15, [r4]
+ 373 00d4 9FED8D7A 		vldr.32	s14, .L34+68
+ 374 00d8 F4EEC77A 		vcmpe.f32	s15, s14
+ 375 00dc F1EE10FA 		vmrs	APSR_nzcv, FPSCR
+ 376 00e0 08DD     		ble	.L29
+ 223:Drivers/Perepheral_drivers/Src/ms5611.c **** 		pressure_sample = false;
+ 377              		.loc 1 223 0 is_stmt 0 discriminator 1
+ 378 00e2 9FED8B7A 		vldr.32	s14, .L34+72
+ 379 00e6 F4EEC77A 		vcmpe.f32	s15, s14
+ 380 00ea F1EE10FA 		vmrs	APSR_nzcv, FPSCR
+ 381 00ee 11D4     		bmi	.L27
+ 223:Drivers/Perepheral_drivers/Src/ms5611.c **** 		pressure_sample = false;
+ 382              		.loc 1 223 0
+ 383 00f0 0023     		movs	r3, #0
+ 384 00f2 00E0     		b	.L19
+ 385              	.L29:
+ 386 00f4 0023     		movs	r3, #0
+ 387              	.L19:
+ 223:Drivers/Perepheral_drivers/Src/ms5611.c **** 		pressure_sample = false;
+ 388              		.loc 1 223 0 discriminator 6
+ 389 00f6 4360     		str	r3, [r0, #4]
+ 224:Drivers/Perepheral_drivers/Src/ms5611.c **** 		u8 data_u8 = 0;
+ 390              		.loc 1 224 0 is_stmt 1 discriminator 6
+ 391 00f8 0023     		movs	r3, #0
+ 392 00fa 734A     		ldr	r2, .L34
+ 393 00fc 1370     		strb	r3, [r2]
+ 225:Drivers/Perepheral_drivers/Src/ms5611.c **** 		p_ms5611->MS5611_BUS_WRITE_FUNC (p_ms5611->dev_addr, CMD_MS5611_CONV_D2, &data_u8, MS5611_GEN_REA
+ 394              		.loc 1 225 0 discriminator 6
+ 395 00fe 06AA     		add	r2, sp, #24
+ 396 0100 02F8013D 		strb	r3, [r2, #-1]!
+ 226:Drivers/Perepheral_drivers/Src/ms5611.c **** 	} else {
+ARM GAS  C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s 			page 13
+
+
+ 397              		.loc 1 226 0 discriminator 6
+ 398 0104 C469     		ldr	r4, [r0, #28]
+ 399 0106 0123     		movs	r3, #1
+ 400 0108 5821     		movs	r1, #88
+ 401 010a 008B     		ldrh	r0, [r0, #24]
+ 402 010c A047     		blx	r4
+ 403              	.LVL28:
+ 404              	.L17:
+ 405              	.LBE2:
+ 247:Drivers/Perepheral_drivers/Src/ms5611.c **** 
+ 406              		.loc 1 247 0
+ 407 010e 07B0     		add	sp, sp, #28
+ 408              	.LCFI6:
+ 409              		.cfi_remember_state
+ 410              		.cfi_def_cfa_offset 36
+ 411              		@ sp needed
+ 412 0110 BDE8F08F 		pop	{r4, r5, r6, r7, r8, r9, r10, fp, pc}
+ 413              	.L27:
+ 414              	.LCFI7:
+ 415              		.cfi_restore_state
+ 416              	.LBB3:
+ 223:Drivers/Perepheral_drivers/Src/ms5611.c **** 		pressure_sample = false;
+ 417              		.loc 1 223 0
+ 418 0114 0123     		movs	r3, #1
+ 419 0116 EEE7     		b	.L19
+ 420              	.L18:
+ 421              	.LBE3:
+ 422              	.LBB4:
+ 228:Drivers/Perepheral_drivers/Src/ms5611.c **** 		dt = raw_temperature - ((long) c5 * 256);
+ 423              		.loc 1 228 0
+ 424 0118 FFF7FEFF 		bl	spi_read24
+ 425              	.LVL29:
+ 426 011c 7D4B     		ldr	r3, .L34+76
+ 427 011e 1860     		str	r0, [r3]
+ 229:Drivers/Perepheral_drivers/Src/ms5611.c **** 		t1 = 2000 + (s64) dt * (s64) c6 / 8388608;
+ 428              		.loc 1 229 0
+ 429 0120 7D4B     		ldr	r3, .L34+80
+ 430 0122 1C88     		ldrh	r4, [r3]
+ 431 0124 A0EB042E 		sub	lr, r0, r4, lsl #8
+ 432 0128 7C4B     		ldr	r3, .L34+84
+ 433 012a C3F800E0 		str	lr, [r3]
+ 230:Drivers/Perepheral_drivers/Src/ms5611.c **** 		ofs1 = (s64) c2 * 65536 + ((s64) c4 * (s64) dt) / 128;
+ 434              		.loc 1 230 0
+ 435 012e 7646     		mov	r6, lr
+ 436 0130 F717     		asrs	r7, r6, #31
+ 437 0132 7B4B     		ldr	r3, .L34+88
+ 438 0134 1888     		ldrh	r0, [r3]
+ 439 0136 AEFB0023 		umull	r2, r3, lr, r0
+ 440 013a 00FB0733 		mla	r3, r0, r7, r3
+ 441 013e 1446     		mov	r4, r2
+ 442 0140 1D46     		mov	r5, r3
+ 443 0142 002A     		cmp	r2, #0
+ 444 0144 73F10001 		sbcs	r1, r3, #0
+ 445 0148 C0F2AF80 		blt	.L31
+ 446              	.L22:
+ 447 014c E30D     		lsrs	r3, r4, #23
+ 448 014e 43EA4520 		orr	r0, r3, r5, lsl #9
+ARM GAS  C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s 			page 14
+
+
+ 449 0152 E915     		asrs	r1, r5, #23
+ 450 0154 10F5FA63 		adds	r3, r0, #2000
+ 451 0158 41F10004 		adc	r4, r1, #0
+ 452 015c 2546     		mov	r5, r4
+ 453 015e 1C46     		mov	r4, r3
+ 454 0160 CDE90045 		strd	r4, [sp]
+ 455 0164 6F4B     		ldr	r3, .L34+92
+ 456 0166 C3E90045 		strd	r4, [r3]
+ 231:Drivers/Perepheral_drivers/Src/ms5611.c **** 		sens1 = (s64) c1 * 32768 + ((s64) c3 * (s64) dt) / 256;
+ 457              		.loc 1 231 0
+ 458 016a 6F4B     		ldr	r3, .L34+96
+ 459 016c 1A88     		ldrh	r2, [r3]
+ 460 016e 4FF00009 		mov	r9, #0
+ 461 0172 4FEA0248 		lsl	r8, r2, #16
+ 462 0176 6D4B     		ldr	r3, .L34+100
+ 463 0178 B3F800A0 		ldrh	r10, [r3]
+ 464 017c AEFB0A23 		umull	r2, r3, lr, r10
+ 465 0180 0AFB0733 		mla	r3, r10, r7, r3
+ 466 0184 1446     		mov	r4, r2
+ 467 0186 1D46     		mov	r5, r3
+ 468 0188 002A     		cmp	r2, #0
+ 469 018a 73F1000C 		sbcs	ip, r3, #0
+ 470 018e C0F29180 		blt	.L32
+ 471              	.L23:
+ 472 0192 E409     		lsrs	r4, r4, #7
+ 473 0194 44EA4562 		orr	r2, r4, r5, lsl #25
+ 474 0198 EB11     		asrs	r3, r5, #7
+ 475 019a 18EB0204 		adds	r4, r8, r2
+ 476 019e 49EB0305 		adc	r5, r9, r3
+ 477 01a2 CDE90245 		strd	r4, [sp, #8]
+ 478 01a6 4C4B     		ldr	r3, .L34+16
+ 479 01a8 C3E90045 		strd	r4, [r3]
+ 232:Drivers/Perepheral_drivers/Src/ms5611.c **** 		if (t1 < 2000) {
+ 480              		.loc 1 232 0
+ 481 01ac 604B     		ldr	r3, .L34+104
+ 482 01ae 1A88     		ldrh	r2, [r3]
+ 483 01b0 4FF0000B 		mov	fp, #0
+ 484 01b4 4FEAC23A 		lsl	r10, r2, #15
+ 485 01b8 5E4B     		ldr	r3, .L34+108
+ 486 01ba B3F80080 		ldrh	r8, [r3]
+ 487 01be AEFB0823 		umull	r2, r3, lr, r8
+ 488 01c2 08FB0733 		mla	r3, r8, r7, r3
+ 489 01c6 9046     		mov	r8, r2
+ 490 01c8 9946     		mov	r9, r3
+ 491 01ca 002A     		cmp	r2, #0
+ 492 01cc 73F10004 		sbcs	r4, r3, #0
+ 493 01d0 75DB     		blt	.L33
+ 494              	.L24:
+ 495 01d2 4FEA1824 		lsr	r4, r8, #8
+ 496 01d6 44EA0962 		orr	r2, r4, r9, lsl #24
+ 497 01da 4FEA2923 		asr	r3, r9, #8
+ 498 01de 12EB0A02 		adds	r2, r2, r10
+ 499 01e2 43EB0B03 		adc	r3, r3, fp
+ 500 01e6 3A4C     		ldr	r4, .L34+8
+ 501 01e8 C4E90023 		strd	r2, [r4]
+ 233:Drivers/Perepheral_drivers/Src/ms5611.c **** 			t2 = (((s64) dt) * dt) >> 31;
+ 502              		.loc 1 233 0
+ARM GAS  C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s 			page 15
+
+
+ 503 01ec DDE900AB 		ldrd	r10, [sp]
+ 504 01f0 BAF5FA6F 		cmp	r10, #2000
+ 505 01f4 7BF10004 		sbcs	r4, fp, #0
+ 506 01f8 44DA     		bge	.L25
+ 234:Drivers/Perepheral_drivers/Src/ms5611.c **** 			aux = (t1 - 2000) * (t1 - 2000);
+ 507              		.loc 1 234 0
+ 508 01fa 0EFB07F6 		mul	r6, lr, r7
+ 509 01fe AEFB0E45 		umull	r4, r5, lr, lr
+ 510 0202 05EB4605 		add	r5, r5, r6, lsl #1
+ 511 0206 E60F     		lsrs	r6, r4, #31
+ 512 0208 46EA4506 		orr	r6, r6, r5, lsl #1
+ 513 020c EF17     		asrs	r7, r5, #31
+ 514 020e 4A4C     		ldr	r4, .L34+112
+ 515 0210 C4E90067 		strd	r6, [r4]
+ 235:Drivers/Perepheral_drivers/Src/ms5611.c **** 			ofs2 = (5 * aux) >> 1;
+ 516              		.loc 1 235 0
+ 517 0214 00FB01F4 		mul	r4, r0, r1
+ 518 0218 A0FB0001 		umull	r0, r1, r0, r0
+ 519 021c 01EB4401 		add	r1, r1, r4, lsl #1
+ 520 0220 464C     		ldr	r4, .L34+116
+ 521 0222 C4E90001 		strd	r0, [r4]
+ 236:Drivers/Perepheral_drivers/Src/ms5611.c **** 			sens2 = (5 * aux) >> 2;
+ 522              		.loc 1 236 0
+ 523 0226 4FEA810E 		lsl	lr, r1, #2
+ 524 022a 8400     		lsls	r4, r0, #2
+ 525 022c 4EEA9075 		orr	r5, lr, r0, lsr #30
+ 526 0230 0019     		adds	r0, r0, r4
+ 527 0232 6941     		adcs	r1, r1, r5
+ 528 0234 5FEA6109 		movs	r9, r1, asr #1
+ 529 0238 4FEA3008 		mov	r8, r0, rrx
+ 530 023c 404C     		ldr	r4, .L34+120
+ 531 023e C4E90089 		strd	r8, [r4]
+ 237:Drivers/Perepheral_drivers/Src/ms5611.c **** 			t1 = t1 - t2;
+ 532              		.loc 1 237 0
+ 533 0242 8408     		lsrs	r4, r0, #2
+ 534 0244 44EA8174 		orr	r4, r4, r1, lsl #30
+ 535 0248 8D10     		asrs	r5, r1, #2
+ 536 024a 3E49     		ldr	r1, .L34+124
+ 537 024c C1E90045 		strd	r4, [r1]
+ 238:Drivers/Perepheral_drivers/Src/ms5611.c **** 			ofs1 = ofs1 - ofs2;
+ 538              		.loc 1 238 0
+ 539 0250 BAEB0600 		subs	r0, r10, r6
+ 540 0254 6BEB0701 		sbc	r1, fp, r7
+ 541 0258 0646     		mov	r6, r0
+ 542 025a 0F46     		mov	r7, r1
+ 543 025c 3149     		ldr	r1, .L34+92
+ 544 025e C1E90067 		strd	r6, [r1]
+ 239:Drivers/Perepheral_drivers/Src/ms5611.c **** 			sens1 = sens1 - sens2;
+ 545              		.loc 1 239 0
+ 546 0262 DDE90201 		ldrd	r0, [sp, #8]
+ 547 0266 B0EB0800 		subs	r0, r0, r8
+ 548 026a 61EB0901 		sbc	r1, r1, r9
+ 549 026e 8046     		mov	r8, r0
+ 550 0270 8946     		mov	r9, r1
+ 551 0272 1949     		ldr	r1, .L34+16
+ 552 0274 C1E90089 		strd	r8, [r1]
+ 240:Drivers/Perepheral_drivers/Src/ms5611.c **** 		}
+ARM GAS  C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s 			page 16
+
+
+ 553              		.loc 1 240 0
+ 554 0278 121B     		subs	r2, r2, r4
+ 555 027a 63EB0503 		sbc	r3, r3, r5
+ 556 027e 1449     		ldr	r1, .L34+8
+ 557 0280 C1E90023 		strd	r2, [r1]
+ 558              	.L25:
+ 242:Drivers/Perepheral_drivers/Src/ms5611.c **** 		pressure_sample = true;
+ 559              		.loc 1 242 0
+ 560 0284 274B     		ldr	r3, .L34+92
+ 561 0286 B3F90020 		ldrsh	r2, [r3]
+ 562 028a 2F4B     		ldr	r3, .L34+128
+ 563 028c 1A80     		strh	r2, [r3]	@ movhi
+ 243:Drivers/Perepheral_drivers/Src/ms5611.c **** 		u8 data_u8 = 0;
+ 564              		.loc 1 243 0
+ 565 028e 0123     		movs	r3, #1
+ 566 0290 0D4A     		ldr	r2, .L34
+ 567 0292 1370     		strb	r3, [r2]
+ 244:Drivers/Perepheral_drivers/Src/ms5611.c **** 		p_ms5611->MS5611_BUS_WRITE_FUNC (p_ms5611->dev_addr, CMD_MS5611_CONV_D1, &data_u8, MS5611_GEN_REA
+ 568              		.loc 1 244 0
+ 569 0294 06AA     		add	r2, sp, #24
+ 570 0296 0021     		movs	r1, #0
+ 571 0298 02F8011D 		strb	r1, [r2, #-1]!
+ 245:Drivers/Perepheral_drivers/Src/ms5611.c **** 	}
+ 572              		.loc 1 245 0
+ 573 029c 1A49     		ldr	r1, .L34+64
+ 574 029e 0868     		ldr	r0, [r1]
+ 575 02a0 C469     		ldr	r4, [r0, #28]
+ 576 02a2 4821     		movs	r1, #72
+ 577 02a4 008B     		ldrh	r0, [r0, #24]
+ 578 02a6 A047     		blx	r4
+ 579              	.LVL30:
+ 580              	.LBE4:
+ 247:Drivers/Perepheral_drivers/Src/ms5611.c **** 
+ 581              		.loc 1 247 0
+ 582 02a8 31E7     		b	.L17
+ 583              	.L31:
+ 584              	.LBB5:
+ 230:Drivers/Perepheral_drivers/Src/ms5611.c **** 		ofs1 = (s64) c2 * 65536 + ((s64) c4 * (s64) dt) / 128;
+ 585              		.loc 1 230 0
+ 586 02aa 284C     		ldr	r4, .L34+132
+ 587 02ac 0025     		movs	r5, #0
+ 588 02ae A418     		adds	r4, r4, r2
+ 589 02b0 5D41     		adcs	r5, r5, r3
+ 590 02b2 4BE7     		b	.L22
+ 591              	.L32:
+ 231:Drivers/Perepheral_drivers/Src/ms5611.c **** 		sens1 = (s64) c1 * 32768 + ((s64) c3 * (s64) dt) / 256;
+ 592              		.loc 1 231 0
+ 593 02b4 12F17F04 		adds	r4, r2, #127
+ 594 02b8 43F10005 		adc	r5, r3, #0
+ 595 02bc 69E7     		b	.L23
+ 596              	.L33:
+ 232:Drivers/Perepheral_drivers/Src/ms5611.c **** 		if (t1 < 2000) {
+ 597              		.loc 1 232 0
+ 598 02be 12F1FF08 		adds	r8, r2, #255
+ 599 02c2 43F10009 		adc	r9, r3, #0
+ 600 02c6 84E7     		b	.L24
+ 601              	.L35:
+ARM GAS  C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s 			page 17
+
+
+ 602              		.align	2
+ 603              	.L34:
+ 604 02c8 00000000 		.word	pressure_sample
+ 605 02cc 00000000 		.word	raw_pressure
+ 606 02d0 00000000 		.word	sens1
+ 607 02d4 0000A03E 		.word	1050673152
+ 608 02d8 00000000 		.word	ofs1
+ 609 02dc 00005940 		.word	1079574528
+ 610 02e0 00000000 		.word	pressure
+ 611 02e4 00000000 		.word	air_pressure
+ 612 02e8 00000000 		.word	iir_coeff
+ 613 02ec 00000000 		.word	iir_diff_coeff
+ 614 02f0 00507D44 		.word	1149063168
+ 615 02f4 0ACA0346 		.word	1174653450
+ 616 02f8 00000000 		.word	abs_neg_hgt
+ 617 02fc 00000000 		.word	init_neg_hgt
+ 618 0300 00000000 		.word	rel_neg_hgt
+ 619 0304 00000000 		.word	.LANCHOR2
+ 620 0308 00000000 		.word	.LANCHOR3
+ 621 030c 0000E143 		.word	1138819072
+ 622 0310 00009644 		.word	1150681088
+ 623 0314 00000000 		.word	raw_temperature
+ 624 0318 00000000 		.word	c5
+ 625 031c 00000000 		.word	dt
+ 626 0320 00000000 		.word	c6
+ 627 0324 00000000 		.word	t1
+ 628 0328 00000000 		.word	c2
+ 629 032c 00000000 		.word	c4
+ 630 0330 00000000 		.word	c1
+ 631 0334 00000000 		.word	c3
+ 632 0338 00000000 		.word	t2
+ 633 033c 00000000 		.word	aux
+ 634 0340 00000000 		.word	ofs2
+ 635 0344 00000000 		.word	sens2
+ 636 0348 00000000 		.word	temperature
+ 637 034c FFFF7F00 		.word	8388607
+ 638              	.LBE5:
+ 639              		.cfi_endproc
+ 640              	.LFE127:
+ 642              		.section	.text.MS561101BA_PROM_READ,"ax",%progbits
+ 643              		.align	1
+ 644              		.global	MS561101BA_PROM_READ
+ 645              		.syntax unified
+ 646              		.thumb
+ 647              		.thumb_func
+ 648              		.fpu fpv4-sp-d16
+ 650              	MS561101BA_PROM_READ:
+ 651              	.LFB132:
+ 283:Drivers/Perepheral_drivers/Src/ms5611.c **** 
+ 284:Drivers/Perepheral_drivers/Src/ms5611.c **** void MS561101BA_PROM_READ(struct ms5611_t *ms5611) {  // Read Calibration Data C
+ 652              		.loc 1 284 0
+ 653              		.cfi_startproc
+ 654              		@ args = 0, pretend = 0, frame = 0
+ 655              		@ frame_needed = 0, uses_anonymous_args = 0
+ 656              	.LVL31:
+ 657 0000 10B5     		push	{r4, lr}
+ 658              	.LCFI8:
+ARM GAS  C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s 			page 18
+
+
+ 659              		.cfi_def_cfa_offset 8
+ 660              		.cfi_offset 4, -8
+ 661              		.cfi_offset 14, -4
+ 662 0002 0446     		mov	r4, r0
+ 285:Drivers/Perepheral_drivers/Src/ms5611.c **** 	c1 = SPI_ReadData_MSREG16(ms5611->dev_addr, CMD_MS5611_ROM_C1);
+ 663              		.loc 1 285 0
+ 664 0004 A221     		movs	r1, #162
+ 665 0006 008B     		ldrh	r0, [r0, #24]
+ 666              	.LVL32:
+ 667 0008 FFF7FEFF 		bl	SPI_ReadData_MSREG16
+ 668              	.LVL33:
+ 669 000c 104B     		ldr	r3, .L38
+ 670 000e 1880     		strh	r0, [r3]	@ movhi
+ 286:Drivers/Perepheral_drivers/Src/ms5611.c **** 	c2 = SPI_ReadData_MSREG16(ms5611->dev_addr, CMD_MS5611_ROM_C2);
+ 671              		.loc 1 286 0
+ 672 0010 A421     		movs	r1, #164
+ 673 0012 208B     		ldrh	r0, [r4, #24]
+ 674 0014 FFF7FEFF 		bl	SPI_ReadData_MSREG16
+ 675              	.LVL34:
+ 676 0018 0E4B     		ldr	r3, .L38+4
+ 677 001a 1880     		strh	r0, [r3]	@ movhi
+ 287:Drivers/Perepheral_drivers/Src/ms5611.c **** 	c3 = SPI_ReadData_MSREG16(ms5611->dev_addr, CMD_MS5611_ROM_C3);
+ 678              		.loc 1 287 0
+ 679 001c A621     		movs	r1, #166
+ 680 001e 208B     		ldrh	r0, [r4, #24]
+ 681 0020 FFF7FEFF 		bl	SPI_ReadData_MSREG16
+ 682              	.LVL35:
+ 683 0024 0C4B     		ldr	r3, .L38+8
+ 684 0026 1880     		strh	r0, [r3]	@ movhi
+ 288:Drivers/Perepheral_drivers/Src/ms5611.c **** 	c4 = SPI_ReadData_MSREG16(ms5611->dev_addr, CMD_MS5611_ROM_C4);
+ 685              		.loc 1 288 0
+ 686 0028 A821     		movs	r1, #168
+ 687 002a 208B     		ldrh	r0, [r4, #24]
+ 688 002c FFF7FEFF 		bl	SPI_ReadData_MSREG16
+ 689              	.LVL36:
+ 690 0030 0A4B     		ldr	r3, .L38+12
+ 691 0032 1880     		strh	r0, [r3]	@ movhi
+ 289:Drivers/Perepheral_drivers/Src/ms5611.c **** 	c5 = SPI_ReadData_MSREG16(ms5611->dev_addr, CMD_MS5611_ROM_C5);
+ 692              		.loc 1 289 0
+ 693 0034 AA21     		movs	r1, #170
+ 694 0036 208B     		ldrh	r0, [r4, #24]
+ 695 0038 FFF7FEFF 		bl	SPI_ReadData_MSREG16
+ 696              	.LVL37:
+ 697 003c 084B     		ldr	r3, .L38+16
+ 698 003e 1880     		strh	r0, [r3]	@ movhi
+ 290:Drivers/Perepheral_drivers/Src/ms5611.c **** 	c6 = SPI_ReadData_MSREG16(ms5611->dev_addr, CMD_MS5611_ROM_C6);
+ 699              		.loc 1 290 0
+ 700 0040 AC21     		movs	r1, #172
+ 701 0042 208B     		ldrh	r0, [r4, #24]
+ 702 0044 FFF7FEFF 		bl	SPI_ReadData_MSREG16
+ 703              	.LVL38:
+ 704 0048 064B     		ldr	r3, .L38+20
+ 705 004a 1880     		strh	r0, [r3]	@ movhi
+ 706 004c 10BD     		pop	{r4, pc}
+ 707              	.LVL39:
+ 708              	.L39:
+ 709 004e 00BF     		.align	2
+ARM GAS  C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s 			page 19
+
+
+ 710              	.L38:
+ 711 0050 00000000 		.word	c1
+ 712 0054 00000000 		.word	c2
+ 713 0058 00000000 		.word	c3
+ 714 005c 00000000 		.word	c4
+ 715 0060 00000000 		.word	c5
+ 716 0064 00000000 		.word	c6
+ 717              		.cfi_endproc
+ 718              	.LFE132:
+ 720              		.section	.text.MS561101BA_Init,"ax",%progbits
+ 721              		.align	1
+ 722              		.global	MS561101BA_Init
+ 723              		.syntax unified
+ 724              		.thumb
+ 725              		.thumb_func
+ 726              		.fpu fpv4-sp-d16
+ 728              	MS561101BA_Init:
+ 729              	.LFB133:
+ 291:Drivers/Perepheral_drivers/Src/ms5611.c **** }
+ 292:Drivers/Perepheral_drivers/Src/ms5611.c **** 
+ 293:Drivers/Perepheral_drivers/Src/ms5611.c **** //
+ 294:Drivers/Perepheral_drivers/Src/ms5611.c **** //MS5611_RETURN_FUNCTION_TYPE MS561101BA_Init(struct ms5611_t* ms5611)
+ 295:Drivers/Perepheral_drivers/Src/ms5611.c **** //{
+ 296:Drivers/Perepheral_drivers/Src/ms5611.c **** //	/*  Variable used to return value of
+ 297:Drivers/Perepheral_drivers/Src/ms5611.c **** //		communication routine*/
+ 298:Drivers/Perepheral_drivers/Src/ms5611.c **** //		MS5611_RETURN_FUNCTION_TYPE com_rslt = ERROR;
+ 299:Drivers/Perepheral_drivers/Src/ms5611.c **** //		u8 data_u8 = MS5611_INIT_VALUE;
+ 300:Drivers/Perepheral_drivers/Src/ms5611.c **** //		u8 config_data_u8 = MS5611_INIT_VALUE;
+ 301:Drivers/Perepheral_drivers/Src/ms5611.c **** //		/* assign bma2x2 ptr */
+ 302:Drivers/Perepheral_drivers/Src/ms5611.c **** //		p_ms5611 = ms5611;
+ 303:Drivers/Perepheral_drivers/Src/ms5611.c **** //		/* read Chip Id */
+ 304:Drivers/Perepheral_drivers/Src/ms5611.c **** //		com_rslt = p_ms5611->MS5611_BUS_READ_FUNC
+ 305:Drivers/Perepheral_drivers/Src/ms5611.c **** //		(p_ms5611->dev_addr,
+ 306:Drivers/Perepheral_drivers/Src/ms5611.c **** //		MS5611_CHIP_ID_REG, &data_u8, MS5611_GEN_READ_WRITE_LENGTH);
+ 307:Drivers/Perepheral_drivers/Src/ms5611.c **** //		p_ms5611->chip_id = data_u8;    /* get bit slice */
+ 308:Drivers/Perepheral_drivers/Src/ms5611.c **** //		/* read the fifo config register and update
+ 309:Drivers/Perepheral_drivers/Src/ms5611.c **** //		the value to the fifo_config*/
+ 310:Drivers/Perepheral_drivers/Src/ms5611.c **** ////		com_rslt += bma2x2_read_reg(BMA2x2_FIFO_MODE_REG,
+ 311:Drivers/Perepheral_drivers/Src/ms5611.c **** ////		&config_data_u8, BMA2x2_GEN_READ_WRITE_LENGTH);
+ 312:Drivers/Perepheral_drivers/Src/ms5611.c **** ////		p_bma2x2->fifo_config = config_data_u8;
+ 313:Drivers/Perepheral_drivers/Src/ms5611.c **** //		return com_rslt;
+ 314:Drivers/Perepheral_drivers/Src/ms5611.c **** //}
+ 315:Drivers/Perepheral_drivers/Src/ms5611.c **** 
+ 316:Drivers/Perepheral_drivers/Src/ms5611.c **** void MS561101BA_Init(struct ms5611_t *ms5611) {
+ 730              		.loc 1 316 0
+ 731              		.cfi_startproc
+ 732              		@ args = 0, pretend = 0, frame = 8
+ 733              		@ frame_needed = 0, uses_anonymous_args = 0
+ 734              	.LVL40:
+ 735 0000 70B5     		push	{r4, r5, r6, lr}
+ 736              	.LCFI9:
+ 737              		.cfi_def_cfa_offset 16
+ 738              		.cfi_offset 4, -16
+ 739              		.cfi_offset 5, -12
+ 740              		.cfi_offset 6, -8
+ 741              		.cfi_offset 14, -4
+ 742 0002 82B0     		sub	sp, sp, #8
+ARM GAS  C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s 			page 20
+
+
+ 743              	.LCFI10:
+ 744              		.cfi_def_cfa_offset 24
+ 317:Drivers/Perepheral_drivers/Src/ms5611.c **** 
+ 318:Drivers/Perepheral_drivers/Src/ms5611.c **** 	p_ms5611 = ms5611;
+ 745              		.loc 1 318 0
+ 746 0004 254C     		ldr	r4, .L47
+ 747 0006 2060     		str	r0, [r4]
+ 319:Drivers/Perepheral_drivers/Src/ms5611.c **** 	MS561101BA_RESET(p_ms5611);
+ 748              		.loc 1 319 0
+ 749 0008 FFF7FEFF 		bl	MS561101BA_RESET
+ 750              	.LVL41:
+ 320:Drivers/Perepheral_drivers/Src/ms5611.c **** 
+ 321:Drivers/Perepheral_drivers/Src/ms5611.c **** 	HAL_Delay(10); //must wait for 2.8ms, I set 5ms, enough.
+ 751              		.loc 1 321 0
+ 752 000c 0A20     		movs	r0, #10
+ 753 000e FFF7FEFF 		bl	HAL_Delay
+ 754              	.LVL42:
+ 322:Drivers/Perepheral_drivers/Src/ms5611.c **** 	MS561101BA_PROM_READ(p_ms5611);
+ 755              		.loc 1 322 0
+ 756 0012 2068     		ldr	r0, [r4]
+ 757 0014 FFF7FEFF 		bl	MS561101BA_PROM_READ
+ 758              	.LVL43:
+ 323:Drivers/Perepheral_drivers/Src/ms5611.c **** 	HAL_Delay(5);
+ 759              		.loc 1 323 0
+ 760 0018 0520     		movs	r0, #5
+ 761 001a FFF7FEFF 		bl	HAL_Delay
+ 762              	.LVL44:
+ 324:Drivers/Perepheral_drivers/Src/ms5611.c **** 	u8 data_u8 = 0;
+ 763              		.loc 1 324 0
+ 764 001e 0025     		movs	r5, #0
+ 765 0020 02AA     		add	r2, sp, #8
+ 766 0022 02F8015D 		strb	r5, [r2, #-1]!
+ 325:Drivers/Perepheral_drivers/Src/ms5611.c **** 	p_ms5611->MS5611_BUS_WRITE_FUNC (p_ms5611->dev_addr, CMD_MS5611_CONV_D2, &data_u8, MS5611_GEN_READ
+ 767              		.loc 1 325 0
+ 768 0026 2068     		ldr	r0, [r4]
+ 769 0028 C669     		ldr	r6, [r0, #28]
+ 770 002a 0123     		movs	r3, #1
+ 771 002c 5821     		movs	r1, #88
+ 772 002e 008B     		ldrh	r0, [r0, #24]
+ 773 0030 B047     		blx	r6
+ 774              	.LVL45:
+ 326:Drivers/Perepheral_drivers/Src/ms5611.c **** 	pressure_sample = false;
+ 775              		.loc 1 326 0
+ 776 0032 1B4B     		ldr	r3, .L47+4
+ 777 0034 1D70     		strb	r5, [r3]
+ 327:Drivers/Perepheral_drivers/Src/ms5611.c **** 	pressure = 0.0f;
+ 778              		.loc 1 327 0
+ 779 0036 0023     		movs	r3, #0
+ 780 0038 1A4A     		ldr	r2, .L47+8
+ 781 003a 1360     		str	r3, [r2]	@ float
+ 328:Drivers/Perepheral_drivers/Src/ms5611.c **** 	temperature = 0;
+ 782              		.loc 1 328 0
+ 783 003c 1A4A     		ldr	r2, .L47+12
+ 784 003e 1580     		strh	r5, [r2]	@ movhi
+ 329:Drivers/Perepheral_drivers/Src/ms5611.c **** 	altitude = 0.0f;
+ 785              		.loc 1 329 0
+ 786 0040 1A4A     		ldr	r2, .L47+16
+ARM GAS  C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s 			page 21
+
+
+ 787 0042 1360     		str	r3, [r2]	@ float
+ 330:Drivers/Perepheral_drivers/Src/ms5611.c **** 	p_ms5611->present = ((c1 > 0x0000) && (c1 < 0xFFFF));
+ 788              		.loc 1 330 0
+ 789 0044 2268     		ldr	r2, [r4]
+ 790 0046 1A4B     		ldr	r3, .L47+20
+ 791 0048 1B88     		ldrh	r3, [r3]
+ 792 004a 013B     		subs	r3, r3, #1
+ 793 004c 9BB2     		uxth	r3, r3
+ 794 004e 4FF6FD71 		movw	r1, #65533
+ 795 0052 8B42     		cmp	r3, r1
+ 796 0054 08D8     		bhi	.L45
+ 797 0056 0123     		movs	r3, #1
+ 798              	.L41:
+ 799              		.loc 1 330 0 is_stmt 0 discriminator 4
+ 800 0058 1360     		str	r3, [r2]
+ 331:Drivers/Perepheral_drivers/Src/ms5611.c **** 	if (p_ms5611->present) {
+ 801              		.loc 1 331 0 is_stmt 1 discriminator 4
+ 802 005a EBB1     		cbz	r3, .L40
+ 332:Drivers/Perepheral_drivers/Src/ms5611.c **** 		p_ms5611->set_filter(0.0f);
+ 803              		.loc 1 332 0
+ 804 005c D368     		ldr	r3, [r2, #12]
+ 805 005e 9FED150A 		vldr.32	s0, .L47+24
+ 806 0062 9847     		blx	r3
+ 807              	.LVL46:
+ 808              	.LBB6:
+ 333:Drivers/Perepheral_drivers/Src/ms5611.c **** 		for (u8 i = 0; i < 13; i++) {
+ 809              		.loc 1 333 0
+ 810 0064 0024     		movs	r4, #0
+ 811 0066 0AE0     		b	.L43
+ 812              	.LVL47:
+ 813              	.L45:
+ 814              	.LBE6:
+ 330:Drivers/Perepheral_drivers/Src/ms5611.c **** 	if (p_ms5611->present) {
+ 815              		.loc 1 330 0
+ 816 0068 0023     		movs	r3, #0
+ 817 006a F5E7     		b	.L41
+ 818              	.LVL48:
+ 819              	.L44:
+ 820              	.LBB7:
+ 334:Drivers/Perepheral_drivers/Src/ms5611.c **** 			HAL_Delay(25);
+ 821              		.loc 1 334 0 discriminator 3
+ 822 006c 1920     		movs	r0, #25
+ 823 006e FFF7FEFF 		bl	HAL_Delay
+ 824              	.LVL49:
+ 335:Drivers/Perepheral_drivers/Src/ms5611.c **** 			p_ms5611->update();
+ 825              		.loc 1 335 0 discriminator 3
+ 826 0072 0A4B     		ldr	r3, .L47
+ 827 0074 1B68     		ldr	r3, [r3]
+ 828 0076 1B69     		ldr	r3, [r3, #16]
+ 829 0078 9847     		blx	r3
+ 830              	.LVL50:
+ 333:Drivers/Perepheral_drivers/Src/ms5611.c **** 			HAL_Delay(25);
+ 831              		.loc 1 333 0 discriminator 3
+ 832 007a 0134     		adds	r4, r4, #1
+ 833              	.LVL51:
+ 834 007c E4B2     		uxtb	r4, r4
+ 835              	.LVL52:
+ARM GAS  C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s 			page 22
+
+
+ 836              	.L43:
+ 333:Drivers/Perepheral_drivers/Src/ms5611.c **** 			HAL_Delay(25);
+ 837              		.loc 1 333 0 is_stmt 0 discriminator 1
+ 838 007e 0C2C     		cmp	r4, #12
+ 839 0080 F4D9     		bls	.L44
+ 840              	.LBE7:
+ 336:Drivers/Perepheral_drivers/Src/ms5611.c **** 		}
+ 337:Drivers/Perepheral_drivers/Src/ms5611.c **** 		init_neg_hgt = abs_neg_hgt;
+ 841              		.loc 1 337 0 is_stmt 1
+ 842 0082 0D4B     		ldr	r3, .L47+28
+ 843 0084 1A68     		ldr	r2, [r3]	@ float
+ 844 0086 0D4B     		ldr	r3, .L47+32
+ 845 0088 1A60     		str	r2, [r3]	@ float
+ 338:Drivers/Perepheral_drivers/Src/ms5611.c **** 		HAL_Delay(25);
+ 846              		.loc 1 338 0
+ 847 008a 1920     		movs	r0, #25
+ 848 008c FFF7FEFF 		bl	HAL_Delay
+ 849              	.LVL53:
+ 339:Drivers/Perepheral_drivers/Src/ms5611.c **** 		p_ms5611->update();
+ 850              		.loc 1 339 0
+ 851 0090 024B     		ldr	r3, .L47
+ 852 0092 1B68     		ldr	r3, [r3]
+ 853 0094 1B69     		ldr	r3, [r3, #16]
+ 854 0096 9847     		blx	r3
+ 855              	.LVL54:
+ 856              	.L40:
+ 340:Drivers/Perepheral_drivers/Src/ms5611.c **** 	}
+ 341:Drivers/Perepheral_drivers/Src/ms5611.c **** }
+ 857              		.loc 1 341 0
+ 858 0098 02B0     		add	sp, sp, #8
+ 859              	.LCFI11:
+ 860              		.cfi_def_cfa_offset 16
+ 861              		@ sp needed
+ 862 009a 70BD     		pop	{r4, r5, r6, pc}
+ 863              	.L48:
+ 864              		.align	2
+ 865              	.L47:
+ 866 009c 00000000 		.word	.LANCHOR3
+ 867 00a0 00000000 		.word	pressure_sample
+ 868 00a4 00000000 		.word	pressure
+ 869 00a8 00000000 		.word	temperature
+ 870 00ac 00000000 		.word	.LANCHOR2
+ 871 00b0 00000000 		.word	c1
+ 872 00b4 00000000 		.word	0
+ 873 00b8 00000000 		.word	abs_neg_hgt
+ 874 00bc 00000000 		.word	init_neg_hgt
+ 875              		.cfi_endproc
+ 876              	.LFE133:
+ 878              		.global	vspeedAsl
+ 879              		.global	asl
+ 880              		.global	aslZero
+ 881              		.global	SENS
+ 882              		.global	OFF
+ 883              		.global	Temperature2
+ 884              		.global	Temperature
+ 885              		.global	dT
+ 886              		.global	Pressure
+ARM GAS  C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s 			page 23
+
+
+ 887              		.global	D2_Temp
+ 888              		.global	D1_Pres
+ 889              		.comm	Cal_C,16,4
+ 890              		.comm	exchange_Temp_num,8,4
+ 891              		.comm	exchange_Pres_num,8,4
+ 892              		.comm	state_baro_counter,1,1
+ 893              		.comm	integrity,1,1
+ 894              		.comm	pressure_sample,1,1
+ 895              		.comm	temperature,2,2
+ 896              		.comm	c6,2,2
+ 897              		.comm	c5,2,2
+ 898              		.comm	c4,2,2
+ 899              		.comm	c3,2,2
+ 900              		.comm	c2,2,2
+ 901              		.comm	c1,2,2
+ 902              		.comm	init_neg_hgt,4,4
+ 903              		.comm	bias,4,4
+ 904              		.comm	air_pressure,4,4
+ 905              		.comm	rel_neg_hgt,4,4
+ 906              		.comm	abs_neg_hgt,4,4
+ 907              		.global	altitude
+ 908              		.comm	pressure,4,4
+ 909              		.comm	iir_diff_coeff,4,4
+ 910              		.comm	iir_coeff,4,4
+ 911              		.comm	raw_temperature,4,4
+ 912              		.comm	raw_pressure,4,4
+ 913              		.comm	dt,4,4
+ 914              		.comm	aux,8,8
+ 915              		.comm	sens2,8,8
+ 916              		.comm	sens1,8,8
+ 917              		.comm	ofs2,8,8
+ 918              		.comm	ofs1,8,8
+ 919              		.comm	t2,8,8
+ 920              		.comm	t1,8,8
+ 921              		.section	.bss.D2_Temp,"aw",%nobits
+ 922              		.align	2
+ 925              	D2_Temp:
+ 926 0000 00000000 		.space	4
+ 927              		.section	.bss.OFF,"aw",%nobits
+ 928              		.align	3
+ 931              	OFF:
+ 932 0000 00000000 		.space	8
+ 932      00000000 
+ 933              		.section	.bss.Pressure,"aw",%nobits
+ 934              		.align	2
+ 937              	Pressure:
+ 938 0000 00000000 		.space	4
+ 939              		.section	.bss.SENS,"aw",%nobits
+ 940              		.align	3
+ 943              	SENS:
+ 944 0000 00000000 		.space	8
+ 944      00000000 
+ 945              		.section	.bss.Temperature,"aw",%nobits
+ 946              		.align	2
+ 949              	Temperature:
+ 950 0000 00000000 		.space	4
+ 951              		.section	.bss.Temperature2,"aw",%nobits
+ARM GAS  C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s 			page 24
+
+
+ 952              		.align	2
+ 955              	Temperature2:
+ 956 0000 00000000 		.space	4
+ 957              		.section	.bss.altitude,"aw",%nobits
+ 958              		.align	2
+ 959              		.set	.LANCHOR2,. + 0
+ 962              	altitude:
+ 963 0000 00000000 		.space	4
+ 964              		.section	.bss.asl,"aw",%nobits
+ 965              		.align	2
+ 966              		.set	.LANCHOR0,. + 0
+ 969              	asl:
+ 970 0000 00000000 		.space	4
+ 971              		.section	.bss.aslZero,"aw",%nobits
+ 972              		.align	2
+ 973              		.set	.LANCHOR1,. + 0
+ 976              	aslZero:
+ 977 0000 00000000 		.space	4
+ 978              		.section	.bss.dT,"aw",%nobits
+ 979              		.align	2
+ 982              	dT:
+ 983 0000 00000000 		.space	4
+ 984              		.section	.bss.p_ms5611,"aw",%nobits
+ 985              		.align	2
+ 986              		.set	.LANCHOR3,. + 0
+ 989              	p_ms5611:
+ 990 0000 00000000 		.space	4
+ 991              		.section	.bss.vspeedAsl,"aw",%nobits
+ 992              		.align	2
+ 995              	vspeedAsl:
+ 996 0000 00000000 		.space	4
+ 997              		.section	.data.D1_Pres,"aw",%progbits
+ 998              		.align	2
+ 1001              	D1_Pres:
+ 1002 0000 0CD28000 		.word	8442380
+ 1003              		.text
+ 1004              	.Letext0:
+ 1005              		.file 2 "c:\\program files\\gcc-arm-none-eabi-6-2017-q2-update-win32\\arm-none-eabi\\include\\mach
+ 1006              		.file 3 "c:\\program files\\gcc-arm-none-eabi-6-2017-q2-update-win32\\arm-none-eabi\\include\\sys\
+ 1007              		.file 4 "Drivers/CMSIS/Include/core_cm4.h"
+ 1008              		.file 5 "Drivers/CMSIS/Device/ST/STM32F4xx/Include/system_stm32f4xx.h"
+ 1009              		.file 6 "Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f405xx.h"
+ 1010              		.file 7 "c:\\program files\\gcc-arm-none-eabi-6-2017-q2-update-win32\\arm-none-eabi\\include\\sys\
+ 1011              		.file 8 "c:\\program files\\gcc-arm-none-eabi-6-2017-q2-update-win32\\arm-none-eabi\\include\\sys\
+ 1012              		.file 9 "c:\\program files\\gcc-arm-none-eabi-6-2017-q2-update-win32\\lib\\gcc\\arm-none-eabi\\6.3
+ 1013              		.file 10 "c:\\program files\\gcc-arm-none-eabi-6-2017-q2-update-win32\\arm-none-eabi\\include\\sys
+ 1014              		.file 11 "Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_def.h"
+ 1015              		.file 12 "Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_gpio.h"
+ 1016              		.file 13 "Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_dma.h"
+ 1017              		.file 14 "Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_spi.h"
+ 1018              		.file 15 "Inc/types.h"
+ 1019              		.file 16 "Inc/../Drivers/Perepheral_drivers/Inc/baro_ms5611.h"
+ 1020              		.file 17 "Inc/../Drivers/Perepheral_drivers/Inc/bma2x2.h"
+ 1021              		.file 18 "Inc/../Drivers/Perepheral_drivers/Inc/bme280.h"
+ 1022              		.file 19 "Inc/../Drivers/Perepheral_drivers/Inc/bmg160.h"
+ 1023              		.file 20 "Inc/../Drivers/Perepheral_drivers/Inc/bmm050.h"
+ 1024              		.file 21 "Inc/includes.h"
+ARM GAS  C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s 			page 25
+
+
+ 1025              		.file 22 "c:\\workspace\\senseairnew\\drivers\\perepheral_drivers\\inc\\ms5611.h"
+ 1026              		.file 23 "c:\\program files\\gcc-arm-none-eabi-6-2017-q2-update-win32\\arm-none-eabi\\include\\mat
+ 1027              		.file 24 "Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal.h"
+ARM GAS  C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s 			page 26
+
+
+DEFINED SYMBOLS
+                            *ABS*:00000000 ms5611.c
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s:18     .text.set_filter:00000000 $t
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s:25     .text.set_filter:00000000 set_filter
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s:47     .text.set_filter:00000018 $d
+                            *COM*:00000004 iir_coeff
+                            *COM*:00000004 iir_diff_coeff
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s:53     .text.asl_fliter:00000000 $t
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s:60     .text.asl_fliter:00000000 asl_fliter
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s:85     .text.asl_fliter:0000002c $d
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s:94     .text.MS561101BA_RESET:00000000 $t
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s:101    .text.MS561101BA_RESET:00000000 MS561101BA_RESET
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s:138    .text.transfer:00000000 $t
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s:145    .text.transfer:00000000 transfer
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s:171    .text.transfer:00000014 $d
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s:176    .text.spi_read24:00000000 $t
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s:183    .text.spi_read24:00000000 spi_read24
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s:243    .text.spi_read24:00000044 $d
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s:254    .text.update:00000000 $t
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s:261    .text.update:00000000 update
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s:604    .text.update:000002c8 $d
+                            *COM*:00000001 pressure_sample
+                            *COM*:00000004 raw_pressure
+                            *COM*:00000008 sens1
+                            *COM*:00000008 ofs1
+                            *COM*:00000004 pressure
+                            *COM*:00000004 air_pressure
+                            *COM*:00000004 abs_neg_hgt
+                            *COM*:00000004 init_neg_hgt
+                            *COM*:00000004 rel_neg_hgt
+                            *COM*:00000004 raw_temperature
+                            *COM*:00000002 c5
+                            *COM*:00000004 dt
+                            *COM*:00000002 c6
+                            *COM*:00000008 t1
+                            *COM*:00000002 c2
+                            *COM*:00000002 c4
+                            *COM*:00000002 c1
+                            *COM*:00000002 c3
+                            *COM*:00000008 t2
+                            *COM*:00000008 aux
+                            *COM*:00000008 ofs2
+                            *COM*:00000008 sens2
+                            *COM*:00000002 temperature
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s:643    .text.MS561101BA_PROM_READ:00000000 $t
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s:650    .text.MS561101BA_PROM_READ:00000000 MS561101BA_PROM_READ
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s:711    .text.MS561101BA_PROM_READ:00000050 $d
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s:721    .text.MS561101BA_Init:00000000 $t
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s:728    .text.MS561101BA_Init:00000000 MS561101BA_Init
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s:866    .text.MS561101BA_Init:0000009c $d
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s:995    .bss.vspeedAsl:00000000 vspeedAsl
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s:969    .bss.asl:00000000 asl
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s:976    .bss.aslZero:00000000 aslZero
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s:943    .bss.SENS:00000000 SENS
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s:931    .bss.OFF:00000000 OFF
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s:955    .bss.Temperature2:00000000 Temperature2
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s:949    .bss.Temperature:00000000 Temperature
+ARM GAS  C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s 			page 27
+
+
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s:982    .bss.dT:00000000 dT
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s:937    .bss.Pressure:00000000 Pressure
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s:925    .bss.D2_Temp:00000000 D2_Temp
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s:1001   .data.D1_Pres:00000000 D1_Pres
+                            *COM*:00000010 Cal_C
+                            *COM*:00000008 exchange_Temp_num
+                            *COM*:00000008 exchange_Pres_num
+                            *COM*:00000001 state_baro_counter
+                            *COM*:00000001 integrity
+                            *COM*:00000004 bias
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s:962    .bss.altitude:00000000 altitude
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s:922    .bss.D2_Temp:00000000 $d
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s:928    .bss.OFF:00000000 $d
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s:934    .bss.Pressure:00000000 $d
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s:940    .bss.SENS:00000000 $d
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s:946    .bss.Temperature:00000000 $d
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s:952    .bss.Temperature2:00000000 $d
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s:958    .bss.altitude:00000000 $d
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s:965    .bss.asl:00000000 $d
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s:972    .bss.aslZero:00000000 $d
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s:979    .bss.dT:00000000 $d
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s:985    .bss.p_ms5611:00000000 $d
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s:989    .bss.p_ms5611:00000000 p_ms5611
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s:992    .bss.vspeedAsl:00000000 $d
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccHyM7iy.s:998    .data.D1_Pres:00000000 $d
+                     .debug_frame:00000010 $d
+
+UNDEFINED SYMBOLS
+hspi2
+HAL_GPIO_WritePin
+__aeabi_i2d
+__aeabi_l2d
+__aeabi_dmul
+__aeabi_dsub
+__aeabi_ddiv
+__aeabi_d2f
+logf
+SPI_ReadData_MSREG16
+HAL_Delay

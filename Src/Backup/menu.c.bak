@@ -1,0 +1,556 @@
+
+/* Includes ------------------------------------------------------------------*/
+#include "includes.h"
+#include "main.h"
+#include "common.h"
+#include "flash_if.h"
+#include "menu.h"
+#include "ymodem.h"
+
+/* Private typedef -----------------------------------------------------------*/
+/* Private define ------------------------------------------------------------*/
+/* Private macro -------------------------------------------------------------*/
+/* Private variables ---------------------------------------------------------*/
+pFunction JumpToApplication;
+uint32_t JumpAddress;
+uint32_t FlashProtection = 0;
+uint8_t aFileName[FILE_NAME_LENGTH];
+
+/* Private function prototypes -----------------------------------------------*/
+void SerialDownload(bool move);
+void SerialUpload(void);
+
+/* Private functions ---------------------------------------------------------*/
+
+/**
+  * @brief  Download a file via serial port
+  * @param  None
+  * @retval None
+  */
+    
+
+void Jump_to_main_programm(void)
+{
+      JumpAddress = *(__IO uint32_t*) (APPLICATION_ADDRESS + 4);
+      JumpToApplication = (pFunction) JumpAddress;
+      __set_MSP(*(__IO uint32_t*) APPLICATION_ADDRESS);
+      JumpToApplication();  
+}    
+
+
+ /* calculating CRC */
+        
+u32 revbit(u32 data)
+ {
+   asm("rbit r0,r0");
+   return data;
+ };
+
+u32 CalcCRC32(u8 *buffer,u32 size)
+ {
+   u32 i, j;
+   u32 ui32;
+   //RCC_AHBPeriphClockCmd(RCC_AHBPeriph_CRC,ENABLE);
+
+   CRC->CR=1;
+
+   asm("NOP");asm("NOP");asm("NOP");//delay for hardware ready
+
+   i = size >> 2;
+
+   while(i--)
+   {
+     ui32=*((u32 *)buffer);
+
+     buffer += 4;
+
+     ui32=revbit(ui32);//reverse the bit order of input data
+
+     CRC->DR=ui32;
+   }
+
+   ui32=CRC->DR;
+
+   ui32=revbit(ui32);//reverse the bit order of output data
+
+   i = size & 3;
+
+   while(i--)
+   {
+     ui32 ^= (u32)*buffer++;
+
+     for(j=0; j<8; j++)
+       if (ui32 & 1)
+         ui32 = (ui32 >> 1) ^ 0xEDB88320;
+       else
+         ui32 >>= 1;
+   }
+
+   ui32^=0xffffffff;//xor with 0xffffffff
+
+   return ui32;//now the output is compatible with windows/winzip/winrar
+ };
+
+
+
+//uint32_t acu_File[3000];
+//uint32_t ccu_File[3000];
+extern uint32_t msTicks,msTicks_Send_to_Modem;
+extern UART_HandleTypeDef huart2;
+extern UART_HandleTypeDef huart5;
+
+extern bool Catched_String_UART5;
+//char aRxBufferCh5='5';
+//#define InBuf5SizeDef 2000
+extern char InBuf5[];
+extern uint16_t InBuf5InPtr;
+uint32_t acuCRC =0 ,ccuCRC = 0;
+uint32_t acu_Size = 0,ccu_Size = 0;
+
+//char term_buffer[1000];
+#define PRINT() {HAL_UART_Transmit(&huart1, (uint8_t *) &term_buffer, strlen(term_buffer),5);}
+
+int Wait_and_Print(long int wait)
+{     term_buffer[0] = 0;
+      msTicks = 0;
+      while(msTicks<wait)
+      {
+      if (Catched_String_UART5 == true)
+      {   if ((strlen(term_buffer)+strlen(InBuf5)) > sizeof(term_buffer)) { term_buffer[0] = 0; }
+            strcat(term_buffer,InBuf5);
+            //HAL_UART_Transmit(&huart1, (uint8_t *) &InBuf5, strlen(InBuf5), 5); // send buf to PC via uart1
+            //Catched_String_UART5 = false;
+//            if (strstr((char*)term_buffer,"OK")!=NULL) break;
+//            if (strstr((char*)term_buffer,"ERR")!=NULL) break;
+//            if (strstr((char*)term_buffer,"^SYSSTART")!=NULL) break;
+            Catched_String_UART5 = false;
+            if (strstr((char*)InBuf5,"OK")!=NULL) break;
+            if (strstr((char*)InBuf5,"ERR")!=NULL) break;
+            if (strstr((char*)InBuf5,"^SYSSTART")!=NULL) break;
+            if (strstr((char*)InBuf5,"CONNECT")!=NULL) break;
+        }
+      }
+      strcat(term_buffer,"\n\0");
+      HAL_UART_Transmit(&huart2, (uint8_t *) &term_buffer, strlen(term_buffer), 50); // send buf to PC via uart1
+      //HAL_Delay(50);
+      HAL_UART_Transmit(&huart1, (uint8_t *) &term_buffer, strlen(term_buffer), 50); // send buf to PC via uart1
+      //HAL_Delay(50);
+}
+
+int Wait_and_Print2(int wait)
+{    
+  Wait_and_Print(wait);
+  return 1;
+  term_buffer[0] = 0;
+      msTicks = 0;
+      while(msTicks<wait)
+      {
+      if (Catched_String_UART5 == true)
+        {   strcat(term_buffer,InBuf5);
+            //HAL_UART_Transmit(&huart1, (uint8_t *) &InBuf5, strlen(InBuf5), 5); // send buf to PC via uart1
+            Catched_String_UART5 = false;
+        }
+      }
+      HAL_UART_Transmit(&huart2, (uint8_t *) &term_buffer, strlen(term_buffer), 20); // send buf to PC via uart1
+      HAL_Delay(50);
+      HAL_UART_Transmit(&huart1, (uint8_t *) &term_buffer, strlen(term_buffer), 20); // send buf to PC via uart1
+      HAL_Delay(50);
+}
+
+
+int AT_init_Modem()
+{
+   
+//            at^sgpsc="Engine",0
+//                      at^sgpsc="Engine",3 
+//             AT^SFSA="ls", "a:/"
+//            AT^SFSA="rename", "a:/MQTT.jar", "MQT.ja"
+//
+//            AT^SFSA="remove", "a:/MQTT.jad"
+//            AT^SFSA="remove", "a:/MQTT.jar"
+//              AT^SFSA="remove", AT^SJAM=2,"http://192.168.244.2:49363/MQTT.jad",""
+//      AT^SJAM=3,"http://192.168.244.2:49363/MQTT.jad",""
+//            AT^SJAM=4                                 list installed apps 
+//            AT^SJAM=5                                 list running apps
+
+//            AT^SJAM=0,"a:/MQTT.jar",""                install
+//
+//            AT^SJAM=1,"a:/MQTT.jar",""                start
+//            
+//            AT^SJAM=2,"a:/MQTT.jar",""                stop
+//            
+//            AT^SJAM=3,"a:/MQTT.jar",""                uninstall
+//           
+//            at^sgpsc="Engine",0 
+//
+//            AT^SJDL=1,330,"MQTT.jad" upload file
+
+ //                         AT^SJDL=1,50,"test.jad"  
+//            AT^SJDL=2,30,"MQTT.jad" delete file
+//                AT^SJDL=2,30,"MQTT.jar"
+//            AT^SJDL=1,228283,"MQTT.jar"
+//                      SPOW set sleep mode
+//            AT^SGPSC?
+ //  AT^SCFG="Serial/Interface/Allocation","0","0"
+//AT^SCFG="Serial/Interface/Allocation",0
+//                                              AT^SGPSC="Nmea/Output","on"
+//            AT^SGPSC="Nmea/Interface","asc0"
+//      AT^SGPSC="Nmea/Interface","usb5"
+//            AT^SGPSC="Nmea/Interface","local"
+//            at^sgpsc?
+//                      ate 0   AT commanf echo OFF         
+//        at^spow? 
+//              at^spow=1,0,0    enable asc0
+// ate 0                                  
+                     //   AT^SCFG="Userware/Autostart",0
+  
+//                              AT^SCFG="Userware/Autostart/Delay",10
+                          
+//AT^SCFG="GPIO/mode/DCD0","std" (enables DCD0 line for ASC0)
+//AT^SCFG="GPIO/mode/DTR0","std" (enables DTR0 line for ASC0)
+//AT^SCFG="GPIO/mode/DSR0","std" (enables DSR0 line for ASC0)
+//
+//AT^SCFG="GPIO/mode/DCD0","gpio" 
+//AT^SCFG="GPIO/mode/DTR0","gpio" 
+//AT^SCFG="GPIO/mode/DSR0","gpio" 
+//
+//AT^SCFG="Userware/Stdout","ASC0",,,,"off"
+//AT^SCFG="Userware/Stdout","USB1",,,,"off"
+//AT+CMUX?                        ???????????????????????????? "Multiplexer User's Guide" [4] which
+//                          
+//             AT^SISX=<service>, <conProfileId>, <address>[, <request>[, <timelimit>]]             
+//AT^SISX="Ping", 6, "8.8.8.8",3 AT^SISX=?
+//  AT^SISX="HostByName",3,"www.nist.gov"
+//AT^SISX="Ping",0,8.8.8.8,4,2000
+//AT^SICS=0,apn,"internet.golantelecom.co.il"
+
+//  AT^SCFG="Radio/OutputPowerReduction","0"
+
+//!!      Wait_and_Print2(10000);
+
+      HAL_UART_Transmit(&huart5, (uint8_t *) "ate 1\r\n",sizeof("ate 0\r\n"),10);                                        // ok
+      Wait_and_Print(5000);
+
+      HAL_UART_Transmit(&huart5, (uint8_t *) "at^spow=1,0,0\r\n",sizeof("at^spow=1,0,0\r\n"),10);                       // ok
+      Wait_and_Print(1000);      
+
+      HAL_UART_Transmit(&huart5, (uint8_t *) "AT^SGPSC=\"Engine\",\"0\"\r" ,strlen("AT^SGPSC=\"Engine\",\"0\"\r"),20);   //  GPS on
+      Wait_and_Print(5000);      
+
+      HAL_UART_Transmit(&huart5, (uint8_t *) "AT^SJAM=2,\"a:/MQTT.jar\",\"\"\r\n",sizeof("AT^SJAM=2,\"a:/MQTT.jar\",\"\"\r\n"),100);  
+      Wait_and_Print(20000);        
+      
+//      HAL_UART_Transmit(&huart5, (uint8_t *) "at^sgpsc?\r\n",sizeof("at^sgpsc?\r\n"),1);                                        // ok
+//      Wait_and_Print(10000);
+      
+//      HAL_UART_Transmit(&huart5, (uint8_t *) "at^scfg?\r\n",sizeof("at^scfg?\r\n"),1);                                        // ok
+//      Wait_and_Print(10000);
+
+}
+
+
+void SerialDownload(bool move)
+{
+  uint8_t number[11] = {0};
+  uint32_t size = 0;
+ 
+  COM_StatusTypeDef result;
+  sprintf(term_buffer,"\r\nWaiting for SmartAir starts to send new FW for SenseAir"); PRINT();
+  
+  result = Ymodem_Receive( &size );
+  sprintf(term_buffer,"\r\nYmodem recieve ended."); PRINT();
+  if (result == COM_OK)
+  { 
+        if (strstr((char*)aFileName,"ACU.bin")!=NULL) 
+        {
+//            AT_init_Modem(); 
+//            HAL_UART_Transmit(&huart5, (uint8_t *) "at^sgpsc?\r\n",sizeof("at^sgpsc?\r\n"),1);                                        // ok
+//            Wait_and_Print(10000);
+//            
+//            HAL_UART_Transmit(&huart5, (uint8_t *) "at^scfg?\r\n",sizeof("at^scfg?\r\n"),1);                                        // ok
+//            Wait_and_Print(10000);
+
+          // DELETE sertificates 
+            sprintf(term_buffer,"\n\rTest. Start send at commands\n\r");
+            HAL_UART_Transmit(&huart1, (uint8_t *) &term_buffer, strlen(term_buffer), 100); // send buf to PC via uart1
+
+          AT_init_Modem();      
+                      
+//!!upper at init modem            HAL_UART_Transmit(&huart5, (uint8_t *) "AT^SJAM=2,\"a:/MQTT.jar\",\"\"\r\n",sizeof("AT^SJAM=2,\"a:/MQTT.jar\",\"\"\r\n"),100);  
+//            Wait_and_Print(20000);        
+          
+            HAL_UART_Transmit(&huart5, (uint8_t *) "AT^SJMSEC?\r\n",sizeof("AT^SJMSEC?\r\n"),100);  
+            Wait_and_Print(10000);        
+
+            HAL_UART_Transmit(&huart5, (uint8_t *) "at^sjmsec=cmd,\"0600B1000000\"\r\n",sizeof("at^sjmsec=cmd,\"0600B1000000\"\r\n"),100);  
+            Wait_and_Print(10000);        
+            HAL_UART_Transmit(&huart5, (uint8_t *) "AT+CFUN=1,1\r\n",sizeof("AT+CFUN=1,1\r\n"),100);          // reboot
+            Wait_and_Print(10000);            
+            AT_init_Modem();      
+
+            HAL_UART_Transmit(&huart5, (uint8_t *) "at^sjmsec=cmd,\"060091000000\"\r\n",sizeof("at^sjmsec=cmd,\"060091000000\"\r\n"),100);  
+            Wait_and_Print(10000);        
+            HAL_UART_Transmit(&huart5, (uint8_t *) "AT+CFUN=1,1\r\n",sizeof("AT+CFUN=1,1\r\n"),100);          // reboot
+            Wait_and_Print(10000);            
+            AT_init_Modem();      
+            
+            HAL_UART_Transmit(&huart5, (uint8_t *) "AT^SFSA=\"remove\",\"a:/ACU.bin\"\r\n",sizeof("AT^SFSA=\"remove\",\"a:/ACU.bin\"\r\n"),100);  
+            Wait_and_Print(10000);        
+            
+            HAL_UART_Transmit(&huart5, (uint8_t *) "AT^SFSA=\"remove\",\"a:/CCU.bin\"\r\n",sizeof("AT^SFSA=\"remove\",\"a:/CCU.bin\"\r\n"),100);  
+            Wait_and_Print(10000);        
+
+//            HAL_UART_Transmit(&huart5, (uint8_t *) "AT^SJMSEC?\r\n",sizeof("AT^SJMSEC?\r\n"),100);  
+//            Wait_and_Print(10000);        
+
+                  
+      // SEND ACU.FILE
+            acu_Size = size; //acu_File = (uint8_t*)DOWNLOAD_ADDRESS;
+            acuCRC = CalcCRC32((uint8_t*)DOWNLOAD_ADDRESS,acu_Size);
+            sprintf(term_buffer,"AT^SJDL=1,%d,\"ACU.bin\"\r\n",acu_Size);// PRINT();                // prepare to send file
+            HAL_Delay(150);
+            HAL_UART_Transmit(&huart5, (uint8_t *) term_buffer,strlen(term_buffer),100);   
+            Wait_and_Print(10000);      
+
+            sprintf(term_buffer,"\r\nSending ACU file. size: %d CRC: 0x%0x",acu_Size,acuCRC); PRINT();
+            HAL_Delay(150);      
+            HAL_UART_Transmit(&huart5, (uint8_t *) DOWNLOAD_ADDRESS,(acu_Size),10000);         
+            Wait_and_Print(10000);      
+
+            HAL_UART_Transmit(&huart5, (uint8_t *) "AT^SJMSEC=\"file\",\"ACU.bin\"\r\n",sizeof("AT^SJMSEC=\"file\",\"ACU.bin\"\r\n"),100);  
+            Wait_and_Print(10000);            
+            HAL_UART_Transmit(&huart5, (uint8_t *) "AT+CFUN=1,1\r\n",sizeof("AT+CFUN=1,1\r\n"),100);           // reboot modem
+            Wait_and_Print(10000);            
+      
+            AT_init_Modem();      
+
+            HAL_UART_Transmit(&huart5, (uint8_t *) "AT^SJMSEC?\r\n",sizeof("AT^SJMSEC?\r\n"),100);  
+            Wait_and_Print(10000);        
+            
+            sprintf(term_buffer,"\n\rSenseAir Modem ACU sertificate loaded");
+            HAL_UART_Transmit(&huart1, (uint8_t *) &term_buffer, strlen(term_buffer), 100); // send buf to PC via uart1
+            HAL_UART_Transmit(&huart2, (uint8_t *) &term_buffer, strlen(term_buffer), 100); // send buf to PC via uart1
+            HAL_UART_Transmit(&huart1, (uint8_t *) &term_buffer, strlen(term_buffer), 100); // send buf to PC via uart1
+            HAL_UART_Transmit(&huart2, (uint8_t *) &term_buffer, strlen(term_buffer), 100); // send buf to PC via uart1
+            HAL_UART_Transmit(&huart1, (uint8_t *) &term_buffer, strlen(term_buffer), 100); // send buf to PC via uart1
+            HAL_UART_Transmit(&huart2, (uint8_t *) &term_buffer, strlen(term_buffer), 100); // send buf to PC via uart1
+            
+                
+        }
+        else
+        if (strstr((char*)aFileName,"CCU.bin")!=NULL)           
+        {   
+//            HAL_UART_Transmit(&huart5, (uint8_t *) "at^sgpsc?\r\n",sizeof("at^sgpsc?\r\n"),1);                                        // ok
+//            Wait_and_Print(10000);
+//            
+//            HAL_UART_Transmit(&huart5, (uint8_t *) "at^scfg?\r\n",sizeof("at^scfg?\r\n"),1);                                        // ok
+//            Wait_and_Print(10000);
+          
+            AT_init_Modem();      
+                      
+//!!            HAL_UART_Transmit(&huart5, (uint8_t *) "AT^SJAM=2,\"a:/MQTT.jar\",\"\"\r\n",sizeof("AT^SJAM=2,\"a:/MQTT.jar\",\"\"\r\n"),100);  
+//            Wait_and_Print(20000);        
+      // SEND CCU.FILE
+            ccu_Size = size; //ccu_File = DOWNLOAD_ADDRESS;
+            ccuCRC = CalcCRC32((uint8_t*)DOWNLOAD_ADDRESS,ccu_Size);
+            sprintf(term_buffer,"AT^SJDL=1,%d,\"CCU.bin\"\r\n",ccu_Size);// PRINT();                // prepare to send  file
+            HAL_Delay(150);
+            HAL_UART_Transmit(&huart5, (uint8_t *) term_buffer,strlen(term_buffer),100);   
+            Wait_and_Print(10000);      
+
+            sprintf(term_buffer,"\r\nSending CCU file. size: %d CRC: 0x%0x",ccu_Size,ccuCRC); PRINT();
+            HAL_Delay(150);      
+            HAL_UART_Transmit(&huart5, (uint8_t *) DOWNLOAD_ADDRESS,(ccu_Size),10000);         
+            Wait_and_Print(10000);      
+
+            HAL_UART_Transmit(&huart5, (uint8_t *) "AT^SJMSEC=\"file\",\"CCU.bin\"\r\n",sizeof("AT^SJMSEC=\"file\",\"CCU.bin\"\r\n"),100);  
+            Wait_and_Print(10000);            
+            
+            HAL_UART_Transmit(&huart5, (uint8_t *) "AT+CFUN=1,1\r\n",sizeof("AT+CFUN=1,1\r\n"),100);           // reboot modem
+            Wait_and_Print(10000);            
+            AT_init_Modem();      
+            
+            HAL_UART_Transmit(&huart5, (uint8_t *) "AT^SJMSEC=\"cmd\",\"0B00310001000500020001\"\r\n",sizeof("AT^SJMSEC=\"cmd\",\"0B00310001000500020001\"\r\n"),100);  
+            Wait_and_Print(10000);            
+            HAL_UART_Transmit(&huart5, (uint8_t *) "AT+CFUN=1,1\r\n",sizeof("AT+CFUN=1,1\r\n"),100);  
+            Wait_and_Print(10000);            
+
+            AT_init_Modem();      
+
+            HAL_UART_Transmit(&huart5, (uint8_t *) "AT^SJMSEC?\r\n",sizeof("AT^SJMSEC?\r\n"),100);  
+            Wait_and_Print(10000);                  
+
+            sprintf(term_buffer,"\r\nSenseAir Modem CCU sertificate loaded");
+            HAL_UART_Transmit(&huart1, (uint8_t *) &term_buffer, strlen(term_buffer), 100); // send buf to PC via uart1
+            HAL_UART_Transmit(&huart2, (uint8_t *) &term_buffer, strlen(term_buffer), 100); // send buf to PC via uart1
+            HAL_UART_Transmit(&huart1, (uint8_t *) &term_buffer, strlen(term_buffer), 100); // send buf to PC via uart1
+            HAL_UART_Transmit(&huart2, (uint8_t *) &term_buffer, strlen(term_buffer), 100); // send buf to PC via uart1
+            HAL_UART_Transmit(&huart1, (uint8_t *) &term_buffer, strlen(term_buffer), 100); // send buf to PC via uart1
+            HAL_UART_Transmit(&huart2, (uint8_t *) &term_buffer, strlen(term_buffer), 100); // send buf to PC via uart1
+
+        }    
+        else
+        {
+            if (move)
+            {
+              FLASH_If_Erase(APPLICATION_ADDRESS,USER_FLASH_SIZE);
+              if (FLASH_If_Write(APPLICATION_ADDRESS, (uint32_t*) DOWNLOAD_ADDRESS, size/4+1) == FLASHIF_OK)
+              { 
+                    sprintf(term_buffer,"\r\nLoading SenseAir FW from SmartAit completed successfully. Name: %s Size: %d bytes.",aFileName,size); PRINT();
+                    uint32_t AA = 0xAAAAAAAA;
+                    uint32_t FF = 0xFFFFFFFF;
+                    uint32_t* ee_flash_base = (uint32_t*)FLAG_ADDRESS;  
+            //        uint32_t Res = *ee_flash_base;
+            //        if (Res==FF)
+                      { 
+                        FLASH_If_Erase(FLAG_ADDRESS,4);
+                        if (FLASH_If_Write(FLAG_ADDRESS, &FF,1) == FLASHIF_OK)                                        
+                        { send_to_PC_UART1("\n\rFlag \"Need update modem\" succesfully written.");
+                        }
+                        else
+                        { send_to_PC_UART1("\n\rError. Flag \"Need update modem\" not written.");
+                        }
+                      }
+                    HAL_UART_DMAStop(&huart5);
+                    Jump_to_main_programm(); 
+              }
+              else /* An error occurred while writing to Flash memory */
+              { sprintf(term_buffer,"\r\nError moving FW to start addr"); PRINT();      
+              }
+            }
+              //sprintf(term_buffer,"\r\nLoading SenseAir FW from SmartAit completed successfully. Name: %s Size: %d bytes.",aFileName,size); PRINT();
+       }
+  }
+  else if (result == COM_LIMIT)
+  {
+    sprintf(term_buffer,"\r\nThe FW size is higher than the allowed space memory!"); PRINT();
+  }
+  else if (result == COM_DATA)
+  {
+    sprintf(term_buffer,"\r\nVerification failed!"); PRINT();
+  }
+  else if (result == COM_ABORT)
+  {
+    sprintf(term_buffer,"\r\n\n\nAborted by user."); PRINT();
+  }
+  else
+  {
+    sprintf(term_buffer,"\r\nFailed to receive the file!"); PRINT();
+  }
+}
+
+/**
+  * @brief  Upload a file via serial port.
+  * @param  None
+  * @retval None
+  */
+void SerialUpload(void)
+{
+  uint8_t status = 0;
+
+  sprintf(term_buffer,"\r\nSelect Receive File"); PRINT();
+
+  HAL_UART_Receive(&UartHandle, &status, 1, RX_TIMEOUT);
+  if ( status == CRC16)
+  {
+    /* Transmit the flash image through ymodem protocol */
+    status = Ymodem_Transmit((uint8_t*)DOWNLOAD_ADDRESS, (const uint8_t*)"UploadedFlashImage.bin", USER_FLASH_SIZE);
+
+    if (status != 0)
+    {
+      sprintf(term_buffer,"\r\nError Occurred while Transmitting File"); PRINT();
+    }
+    else
+    {
+      sprintf(term_buffer,"\r\nFile uploaded successfully"); PRINT();
+    }
+  }
+}
+
+
+/**
+  * @brief  Display the Main Menu on HyperTerminal
+  * @param  None
+  * @retval None
+  */
+void Main_Menu(void)
+{
+
+
+  uint8_t key = 0;
+  while (1)
+  {
+
+    /* Test if any sector of Flash memory where user application will be loaded is write protected */
+    FlashProtection = FLASH_If_GetWriteProtectionStatus();
+    
+    sprintf(term_buffer,"\r\n=========================================================="); PRINT();
+
+    /* Clean the input path */
+    __HAL_UART_FLUSH_DRREGISTER(&UartHandle);
+	
+    /* Receive key */
+    HAL_UART_Receive(&UartHandle, &key, 1, RX_TIMEOUT);
+
+    switch (key)
+    {
+    case '1' :
+      /* Download user application in the Flash */
+      SerialDownload(true);
+      break;
+    case '2' :
+      /* Upload user application from the Flash */
+      SerialUpload();
+      break;
+    case '3' :
+      sprintf(term_buffer,"\r\nStart program execution......"); PRINT();
+      Jump_to_main_programm();
+      break;
+    case '8' :
+      sprintf(term_buffer,"\r\nStart program execution......"); PRINT();
+      break;
+    case '4' :
+      if (FlashProtection != FLASHIF_PROTECTION_NONE)
+      {
+        /* Disable the write protection */
+        if (FLASH_If_WriteProtectionConfig(OB_WRPSTATE_DISABLE) == HAL_OK)
+        {
+          sprintf(term_buffer,"\r\nWrite Protection disabled..."); PRINT();
+          sprintf(term_buffer,"\r\nSystem will now restart..."); PRINT();
+          /* Launch the option byte loading */
+          HAL_FLASH_OB_Launch();
+          /* Ulock the flash */
+          HAL_FLASH_Unlock();
+        }
+        else
+        {
+          sprintf(term_buffer,"\r\nError: Flash write un-protection failed...\r\n"); PRINT();
+        }
+      }
+      else
+      {
+        if (FLASH_If_WriteProtectionConfig(OB_WRPSTATE_ENABLE) == HAL_OK)
+        {
+          sprintf(term_buffer,"\r\nWrite Protection enabled..."); PRINT();
+          sprintf(term_buffer,"\r\nSystem will now restart..."); PRINT();
+          /* Launch the option byte loading */
+          HAL_FLASH_OB_Launch();
+        }
+        else
+        {
+          sprintf(term_buffer,"\r\nError: Flash write protection failed...\r\n"); PRINT();
+        }
+      }
+      break;
+    default:
+	sprintf(term_buffer,"\r\nInvalid Number ! ==> The number should be either 1, 2, 3 or 4\r"); PRINT();
+	break;
+    }
+  }
+}
+
+/**
+  * @}
+  */
+
+/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

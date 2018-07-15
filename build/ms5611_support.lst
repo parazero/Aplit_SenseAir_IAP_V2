@@ -1,0 +1,1144 @@
+ARM GAS  C:\Users\ALEXSN~1\AppData\Local\Temp\ccfM6P3b.s 			page 1
+
+
+   1              		.cpu cortex-m4
+   2              		.eabi_attribute 27, 1
+   3              		.eabi_attribute 28, 1
+   4              		.eabi_attribute 20, 1
+   5              		.eabi_attribute 21, 1
+   6              		.eabi_attribute 23, 3
+   7              		.eabi_attribute 24, 1
+   8              		.eabi_attribute 25, 1
+   9              		.eabi_attribute 26, 1
+  10              		.eabi_attribute 30, 1
+  11              		.eabi_attribute 34, 1
+  12              		.eabi_attribute 18, 4
+  13              		.file	"ms5611_support.c"
+  14              		.text
+  15              	.Ltext0:
+  16              		.cfi_sections	.debug_frame
+  17              		.section	.text.MS5611_SPI_bus_readREG16,"ax",%progbits
+  18              		.align	1
+  19              		.global	MS5611_SPI_bus_readREG16
+  20              		.syntax unified
+  21              		.thumb
+  22              		.thumb_func
+  23              		.fpu fpv4-sp-d16
+  25              	MS5611_SPI_bus_readREG16:
+  26              	.LFB130:
+  27              		.file 1 "Drivers/Perepheral_drivers/Src/ms5611_support.c"
+   1:Drivers/Perepheral_drivers/Src/ms5611_support.c **** /*
+   2:Drivers/Perepheral_drivers/Src/ms5611_support.c ****  * ms5611_support.c
+   3:Drivers/Perepheral_drivers/Src/ms5611_support.c ****  *
+   4:Drivers/Perepheral_drivers/Src/ms5611_support.c ****  *  Created on: 8 баев„ 2017
+   5:Drivers/Perepheral_drivers/Src/ms5611_support.c ****  *      Author: user
+   6:Drivers/Perepheral_drivers/Src/ms5611_support.c ****  */
+   7:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 
+   8:Drivers/Perepheral_drivers/Src/ms5611_support.c **** #include "../../Perepheral_drivers/Inc/ms5611.h"
+   9:Drivers/Perepheral_drivers/Src/ms5611_support.c **** #include "includes.h"
+  10:Drivers/Perepheral_drivers/Src/ms5611_support.c **** #include "main.h"
+  11:Drivers/Perepheral_drivers/Src/ms5611_support.c **** #include "stm32f4xx_hal.h"
+  12:Drivers/Perepheral_drivers/Src/ms5611_support.c **** #include "stm32f4xx_hal_spi.h"
+  13:Drivers/Perepheral_drivers/Src/ms5611_support.c **** #include "stm32f4xx_hal_usart.h"
+  14:Drivers/Perepheral_drivers/Src/ms5611_support.c **** #include "stm32f4xx_hal_i2c.h"
+  15:Drivers/Perepheral_drivers/Src/ms5611_support.c **** #include "stm32f4xx_hal_gpio.h"
+  16:Drivers/Perepheral_drivers/Src/ms5611_support.c **** #include "string.h"
+  17:Drivers/Perepheral_drivers/Src/ms5611_support.c **** #include "types.h"
+  18:Drivers/Perepheral_drivers/Src/ms5611_support.c **** #include "stdint.h"
+  19:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 
+  20:Drivers/Perepheral_drivers/Src/ms5611_support.c **** #include "types.h"
+  21:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 
+  22:Drivers/Perepheral_drivers/Src/ms5611_support.c **** extern SPI_HandleTypeDef hspi2;
+  23:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 
+  24:Drivers/Perepheral_drivers/Src/ms5611_support.c **** /************** I2C/SPI buffer length ******/
+  25:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 
+  26:Drivers/Perepheral_drivers/Src/ms5611_support.c **** #define SPI_BUFFER_LEN 5
+  27:Drivers/Perepheral_drivers/Src/ms5611_support.c **** #define BMA2x2_BUS_READ_WRITE_ARRAY_INDEX	1
+  28:Drivers/Perepheral_drivers/Src/ms5611_support.c **** #define BMA2x2_SPI_BUS_WRITE_CONTROL_BYTE	0x7F
+  29:Drivers/Perepheral_drivers/Src/ms5611_support.c **** #define BMA2x2_SPI_BUS_READ_CONTROL_BYTE	0x80
+  30:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 
+  31:Drivers/Perepheral_drivers/Src/ms5611_support.c **** s8 MS5611_SPI_bus_write(u16 dev_addr, u8 reg_addr, u8 *reg_data, u8 cnt);
+ARM GAS  C:\Users\ALEXSN~1\AppData\Local\Temp\ccfM6P3b.s 			page 2
+
+
+  32:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 
+  33:Drivers/Perepheral_drivers/Src/ms5611_support.c **** s8 MS5611_SPI_bus_read(u16 dev_addr, u8 reg_addr, u8 *reg_data, u8 cnt);
+  34:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 
+  35:Drivers/Perepheral_drivers/Src/ms5611_support.c **** s8 SPI_routine_MS5611(struct ms5611_t* ms5611);
+  36:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 
+  37:Drivers/Perepheral_drivers/Src/ms5611_support.c **** s32 MS5611_data_readout(struct ms5611_t* ms5611);
+  38:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 
+  39:Drivers/Perepheral_drivers/Src/ms5611_support.c **** void MS5611_delay_msek(u32 msek);
+  40:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 
+  41:Drivers/Perepheral_drivers/Src/ms5611_support.c **** u16 MS5611_SPI_bus_readREG16(u16 dev_addr, u8 reg_addr, u16 *reg_data, u8 cnt);
+  42:Drivers/Perepheral_drivers/Src/ms5611_support.c **** u32 MS5611_SPI_bus_readREG24(u16 dev_addr, u8 reg_addr, u32 *reg_data, u8 cnt);
+  43:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 
+  44:Drivers/Perepheral_drivers/Src/ms5611_support.c **** s8 SPI_SendData_MS(uint16_t gpio_pin, uint8_t* data, u8 size, uint32_t timeout);
+  45:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 
+  46:Drivers/Perepheral_drivers/Src/ms5611_support.c **** s8 SPI_ReadData_MS(uint16_t gpio_pin, uint8_t* data, u8 size, uint32_t timeout);
+  47:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 
+  48:Drivers/Perepheral_drivers/Src/ms5611_support.c **** s8 SPI_routine_MS5611(struct ms5611_t* ms5611) {
+  49:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	ms5611->bus_write = MS5611_SPI_bus_write;
+  50:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	ms5611->bus_read = MS5611_SPI_bus_read;
+  51:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	ms5611->bus_readREG16 = MS5611_SPI_bus_readREG16;
+  52:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	ms5611->bus_readREG24 = MS5611_SPI_bus_readREG24;
+  53:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	ms5611->delay_msec = MS5611_delay_msek;
+  54:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	ms5611->set_filter = set_filter;
+  55:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	ms5611->update = update;
+  56:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	ms5611->present = false;
+  57:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	ms5611->valid = false;
+  58:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	ms5611->state_baro_counter = 0;
+  59:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	return MS5611_INIT_VALUE;
+  60:Drivers/Perepheral_drivers/Src/ms5611_support.c **** }
+  61:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 
+  62:Drivers/Perepheral_drivers/Src/ms5611_support.c **** s8 SPI_SendData_MS(uint16_t gpio_pin, uint8_t* data, u8 size, uint32_t timeout) {
+  63:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	s32 iError = MS5611_INIT_VALUE;
+  64:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	HAL_GPIO_WritePin(GPIOC, gpio_pin, GPIO_PIN_RESET);
+  65:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	iError = HAL_SPI_Transmit(&hspi2, data, size, timeout);
+  66:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	while (HAL_SPI_GetState(&hspi2) == HAL_SPI_STATE_BUSY);
+  67:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	HAL_GPIO_WritePin(GPIOC, gpio_pin, GPIO_PIN_SET);
+  68:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	return (s8) iError;
+  69:Drivers/Perepheral_drivers/Src/ms5611_support.c **** }
+  70:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 
+  71:Drivers/Perepheral_drivers/Src/ms5611_support.c **** s8 SPI_ReadData_MS(uint16_t gpio_pin, uint8_t* data, u8 size, uint32_t timeout) {
+  72:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 
+  73:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	s32 iError = MS5611_INIT_VALUE;
+  74:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	HAL_GPIO_WritePin(GPIOC, gpio_pin, GPIO_PIN_RESET);
+  75:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	iError = HAL_SPI_Receive(&hspi2, data, size, timeout);
+  76:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	while (HAL_SPI_GetState(&hspi2) == HAL_SPI_STATE_BUSY)
+  77:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 		;
+  78:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	HAL_GPIO_WritePin(GPIOC, gpio_pin, GPIO_PIN_SET);
+  79:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	return (s8) iError;
+  80:Drivers/Perepheral_drivers/Src/ms5611_support.c **** }
+  81:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 
+  82:Drivers/Perepheral_drivers/Src/ms5611_support.c **** u16 SPI_ReadData_MSREG16(u16 gpio_pin, u8 reg) {
+  83:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	u8 b0, b1;
+  84:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	u8 addr = reg;
+  85:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	HAL_GPIO_WritePin(GPIOC, gpio_pin, GPIO_PIN_RESET);
+  86:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	transfer(addr);
+  87:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	b1 = transfer(0);
+  88:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	b0 = transfer(0);
+ARM GAS  C:\Users\ALEXSN~1\AppData\Local\Temp\ccfM6P3b.s 			page 3
+
+
+  89:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	HAL_GPIO_WritePin(GPIOC, gpio_pin, GPIO_PIN_SET);
+  90:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	return (((u16) b1 << 8) | b0);
+  91:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 
+  92:Drivers/Perepheral_drivers/Src/ms5611_support.c **** }
+  93:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 
+  94:Drivers/Perepheral_drivers/Src/ms5611_support.c **** u32 SPI_ReadData_MSREG24(u16 gpio_pin, u8* data, u8 size, u32 timeout) {
+  95:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	u8 b0, b1, b2;
+  96:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	HAL_GPIO_WritePin(GPIOC, gpio_pin, GPIO_PIN_RESET);
+  97:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	transfer(0x00);
+  98:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	b2 = transfer(0);
+  99:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	b1 = transfer(0);
+ 100:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	b0 = transfer(0);
+ 101:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	HAL_GPIO_WritePin(GPIOC, gpio_pin, GPIO_PIN_SET);
+ 102:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	return (((u32) b2) << 16) | (((u32) b1) << 8) | (b0);
+ 103:Drivers/Perepheral_drivers/Src/ms5611_support.c **** }
+ 104:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 
+ 105:Drivers/Perepheral_drivers/Src/ms5611_support.c **** s8 MS5611_SPI_bus_read(u16 dev_addr, u8 reg_addr, u8 *reg_data, u8 cnt) {
+ 106:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	s32 iError = MS5611_INIT_VALUE;
+ 107:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	u8 array[SPI_BUFFER_LEN] = { 0xFF };
+ 108:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	u8 stringpos;
+ 109:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	memset(array, 0, SPI_BUFFER_LEN - 1);
+ 110:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	/*	For the SPI mode only 7 bits of register addresses are used.
+ 111:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	 The MSB of register address is declared the bit what functionality it is
+ 112:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	 read/write (read as 1/write as 0)*/
+ 113:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	array[MS5611_INIT_VALUE] = reg_addr | BMA2x2_SPI_BUS_READ_CONTROL_BYTE;
+ 114:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	/*read routine is initiated register address is mask with 0x80*/
+ 115:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	iError = SPI_ReadData_MS(dev_addr, array, cnt + 1, HAL_MAX_DELAY);
+ 116:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	/*
+ 117:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	 * Please take the below function as your reference for
+ 118:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	 * read the data using SPI communication
+ 119:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	 * " IERROR = SPI_READ_WRITE_STRING(ARRAY, ARRAY, CNT+1)"
+ 120:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	 * add your SPI read function here
+ 121:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	 * iError is an return value of SPI read function
+ 122:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	 * Please select your valid return value
+ 123:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	 * In the driver SUCCESS defined as 0
+ 124:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	 * and FAILURE defined as -1
+ 125:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	 * Note :
+ 126:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	 * This is a full duplex operation,
+ 127:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	 * The first read data is discarded, for that extra write operation
+ 128:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	 * have to be initiated. For that cnt+1 operation done in the SPI read
+ 129:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	 * and write string function
+ 130:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	 * For more information please refer data sheet SPI communication:
+ 131:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	 */
+ 132:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	for (stringpos = MS5611_INIT_VALUE; stringpos < cnt; stringpos++) { //wrong chipID but seems valid
+ 133:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 		*(reg_data + stringpos) = array[stringpos +
+ 134:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 		BMA2x2_BUS_READ_WRITE_ARRAY_INDEX];
+ 135:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	}
+ 136:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	return (s8) iError;
+ 137:Drivers/Perepheral_drivers/Src/ms5611_support.c **** }
+ 138:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 
+ 139:Drivers/Perepheral_drivers/Src/ms5611_support.c **** u16 MS5611_SPI_bus_readREG16(u16 dev_addr, u8 reg_addr, u16 *reg_data, u8 cnt) {
+  28              		.loc 1 139 0
+  29              		.cfi_startproc
+  30              		@ args = 0, pretend = 0, frame = 24
+  31              		@ frame_needed = 0, uses_anonymous_args = 0
+  32              		@ link register save eliminated.
+  33              	.LVL0:
+ARM GAS  C:\Users\ALEXSN~1\AppData\Local\Temp\ccfM6P3b.s 			page 4
+
+
+  34 0000 86B0     		sub	sp, sp, #24
+  35              	.LCFI0:
+  36              		.cfi_def_cfa_offset 24
+  37              	.LVL1:
+  38              	.LBB2:
+ 140:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	s32 iError = MS5611_INIT_VALUE;
+ 141:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	u8 array[SPI_BUFFER_LEN] = { MS5611_INIT_VALUE };
+ 142:Drivers/Perepheral_drivers/Src/ms5611_support.c **** //	u8 stringpos;
+ 143:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	memset(array, 0, SPI_BUFFER_LEN - 1);
+ 144:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 
+ 145:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	array[MS5611_INIT_VALUE] = reg_addr;
+ 146:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	/*read routine is initiated register address is mask with 0x80*/
+ 147:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	u16 Cal_C[7] = { (u16) MS5611_INIT_VALUE };
+ 148:Drivers/Perepheral_drivers/Src/ms5611_support.c **** //	MS561101BA_PROM_READ();
+ 149:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	memset(Cal_C, 0, 7);
+ 150:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	for (int var = 0; var < 8; var++) {
+  39              		.loc 1 150 0
+  40 0002 0023     		movs	r3, #0
+  41              	.LVL2:
+  42 0004 00E0     		b	.L2
+  43              	.LVL3:
+  44              	.L3:
+  45              		.loc 1 150 0 is_stmt 0 discriminator 3
+  46 0006 0133     		adds	r3, r3, #1
+  47              	.LVL4:
+  48              	.L2:
+  49              		.loc 1 150 0 discriminator 1
+  50 0008 072B     		cmp	r3, #7
+  51 000a FCDD     		ble	.L3
+  52              	.LBE2:
+ 151:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 		array[MS5611_INIT_VALUE] = array[MS5611_INIT_VALUE] + var * 2;
+ 152:Drivers/Perepheral_drivers/Src/ms5611_support.c **** //		*(reg_data + var) = SPI_ReadData_MSREG16(dev_addr, &array, cnt + 1,
+ 153:Drivers/Perepheral_drivers/Src/ms5611_support.c **** //				HAL_MAX_DELAY);
+ 154:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	}
+ 155:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	return (u16) Cal_C;
+ 156:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 
+ 157:Drivers/Perepheral_drivers/Src/ms5611_support.c **** }
+  53              		.loc 1 157 0 is_stmt 1
+  54 000c 0020     		movs	r0, #0
+  55              	.LVL5:
+  56 000e 06B0     		add	sp, sp, #24
+  57              	.LCFI1:
+  58              		.cfi_def_cfa_offset 0
+  59              		@ sp needed
+  60 0010 7047     		bx	lr
+  61              		.cfi_endproc
+  62              	.LFE130:
+  64              		.section	.text.MS5611_delay_msek,"ax",%progbits
+  65              		.align	1
+  66              		.global	MS5611_delay_msek
+  67              		.syntax unified
+  68              		.thumb
+  69              		.thumb_func
+  70              		.fpu fpv4-sp-d16
+  72              	MS5611_delay_msek:
+  73              	.LFB133:
+ 158:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 
+ARM GAS  C:\Users\ALEXSN~1\AppData\Local\Temp\ccfM6P3b.s 			page 5
+
+
+ 159:Drivers/Perepheral_drivers/Src/ms5611_support.c **** u32 MS5611_SPI_bus_readREG24(u16 dev_addr, u8 reg_addr, u32 *reg_data, u8 cnt) {
+ 160:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	u32 result = *reg_data;
+ 161:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	s32 iError = MS5611_INIT_VALUE;
+ 162:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	u8 array[SPI_BUFFER_LEN] = { MS5611_INIT_VALUE };
+ 163:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	memset(array, 0, SPI_BUFFER_LEN - 1);
+ 164:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 
+ 165:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	array[MS5611_INIT_VALUE] = reg_addr;
+ 166:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	result = SPI_ReadData_MSREG24(dev_addr, (u8*)&array, cnt + 1, HAL_MAX_DELAY); //!result = SPI_Read
+ 167:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	*reg_data = result;
+ 168:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	return result;
+ 169:Drivers/Perepheral_drivers/Src/ms5611_support.c **** }
+ 170:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 
+ 171:Drivers/Perepheral_drivers/Src/ms5611_support.c **** /*	\Brief: The function is used as SPI bus write
+ 172:Drivers/Perepheral_drivers/Src/ms5611_support.c ****  *	\Return : Status of the SPI write
+ 173:Drivers/Perepheral_drivers/Src/ms5611_support.c ****  *	\param dev_addr : The device address of the sensor
+ 174:Drivers/Perepheral_drivers/Src/ms5611_support.c ****  *	\param reg_addr : Address of the first register,
+ 175:Drivers/Perepheral_drivers/Src/ms5611_support.c ****  *               will data is going to be written
+ 176:Drivers/Perepheral_drivers/Src/ms5611_support.c ****  *	\param reg_data : It is a value hold in the array,
+ 177:Drivers/Perepheral_drivers/Src/ms5611_support.c ****  *		will be used for write the value into the register
+ 178:Drivers/Perepheral_drivers/Src/ms5611_support.c ****  *	\param cnt : The no of byte of data to be write
+ 179:Drivers/Perepheral_drivers/Src/ms5611_support.c ****  */
+ 180:Drivers/Perepheral_drivers/Src/ms5611_support.c **** s8 MS5611_SPI_bus_write(u16 dev_addr, u8 reg_addr, u8 *reg_data, u8 cnt) {
+ 181:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	s32 iError = MS5611_INIT_VALUE;
+ 182:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	u8 array[SPI_BUFFER_LEN * 2];
+ 183:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	u8 stringpos = MS5611_INIT_VALUE;
+ 184:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 
+ 185:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	for (stringpos = MS5611_INIT_VALUE; stringpos < cnt; stringpos++) {
+ 186:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 		/* the operation of (reg_addr++)&0x7F done:
+ 187:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 		 because it ensure the
+ 188:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 		 0 and 1 of the given value
+ 189:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 		 It is done only for 8bit operation*/
+ 190:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 		array[stringpos * 2] = (reg_addr++) &
+ 191:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 		BMA2x2_SPI_BUS_WRITE_CONTROL_BYTE;
+ 192:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 		array[stringpos * 2 + BMA2x2_BUS_READ_WRITE_ARRAY_INDEX] = *(reg_data
+ 193:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 				+ stringpos);
+ 194:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 
+ 195:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	}
+ 196:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	/* Please take the below function as your reference
+ 197:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	 * for write the data using SPI communication
+ 198:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	 * add your SPI write function here.
+ 199:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	 * "IERROR = SPI_WRITE_STRING(ARRAY, CNT*2)"
+ 200:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	 * iError is an return value of SPI write function
+ 201:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	 * Please select your valid return value
+ 202:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	 * In the driver SUCCESS defined as 0
+ 203:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	 * and FAILURE defined as -1
+ 204:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	 */
+ 205:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	iError = SPI_SendData_MS(dev_addr, array, cnt * 2, HAL_MAX_DELAY);
+ 206:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 
+ 207:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	return (s8) iError;
+ 208:Drivers/Perepheral_drivers/Src/ms5611_support.c **** }
+ 209:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 
+ 210:Drivers/Perepheral_drivers/Src/ms5611_support.c **** void MS5611_delay_msek(u32 msek) {
+  74              		.loc 1 210 0
+  75              		.cfi_startproc
+  76              		@ args = 0, pretend = 0, frame = 0
+  77              		@ frame_needed = 0, uses_anonymous_args = 0
+  78              	.LVL6:
+ARM GAS  C:\Users\ALEXSN~1\AppData\Local\Temp\ccfM6P3b.s 			page 6
+
+
+  79 0000 08B5     		push	{r3, lr}
+  80              	.LCFI2:
+  81              		.cfi_def_cfa_offset 8
+  82              		.cfi_offset 3, -8
+  83              		.cfi_offset 14, -4
+ 211:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	/*Here you can write your own delay routine*/
+ 212:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	HAL_Delay(msek);
+  84              		.loc 1 212 0
+  85 0002 FFF7FEFF 		bl	HAL_Delay
+  86              	.LVL7:
+  87 0006 08BD     		pop	{r3, pc}
+  88              		.cfi_endproc
+  89              	.LFE133:
+  91              		.section	.text.SPI_routine_MS5611,"ax",%progbits
+  92              		.align	1
+  93              		.global	SPI_routine_MS5611
+  94              		.syntax unified
+  95              		.thumb
+  96              		.thumb_func
+  97              		.fpu fpv4-sp-d16
+  99              	SPI_routine_MS5611:
+ 100              	.LFB124:
+  48:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	ms5611->bus_write = MS5611_SPI_bus_write;
+ 101              		.loc 1 48 0
+ 102              		.cfi_startproc
+ 103              		@ args = 0, pretend = 0, frame = 0
+ 104              		@ frame_needed = 0, uses_anonymous_args = 0
+ 105              		@ link register save eliminated.
+ 106              	.LVL8:
+ 107 0000 0346     		mov	r3, r0
+  49:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	ms5611->bus_read = MS5611_SPI_bus_read;
+ 108              		.loc 1 49 0
+ 109 0002 094A     		ldr	r2, .L8
+ 110 0004 C261     		str	r2, [r0, #28]
+  50:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	ms5611->bus_readREG16 = MS5611_SPI_bus_readREG16;
+ 111              		.loc 1 50 0
+ 112 0006 094A     		ldr	r2, .L8+4
+ 113 0008 0262     		str	r2, [r0, #32]
+  51:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	ms5611->bus_readREG24 = MS5611_SPI_bus_readREG24;
+ 114              		.loc 1 51 0
+ 115 000a 094A     		ldr	r2, .L8+8
+ 116 000c 4262     		str	r2, [r0, #36]
+  52:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	ms5611->delay_msec = MS5611_delay_msek;
+ 117              		.loc 1 52 0
+ 118 000e 094A     		ldr	r2, .L8+12
+ 119 0010 8262     		str	r2, [r0, #40]
+  53:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	ms5611->set_filter = set_filter;
+ 120              		.loc 1 53 0
+ 121 0012 094A     		ldr	r2, .L8+16
+ 122 0014 C262     		str	r2, [r0, #44]
+  54:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	ms5611->update = update;
+ 123              		.loc 1 54 0
+ 124 0016 094A     		ldr	r2, .L8+20
+ 125 0018 C260     		str	r2, [r0, #12]
+  55:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	ms5611->present = false;
+ 126              		.loc 1 55 0
+ 127 001a 094A     		ldr	r2, .L8+24
+ARM GAS  C:\Users\ALEXSN~1\AppData\Local\Temp\ccfM6P3b.s 			page 7
+
+
+ 128 001c 0261     		str	r2, [r0, #16]
+  56:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	ms5611->valid = false;
+ 129              		.loc 1 56 0
+ 130 001e 0020     		movs	r0, #0
+ 131              	.LVL9:
+ 132 0020 1860     		str	r0, [r3]
+  57:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	ms5611->state_baro_counter = 0;
+ 133              		.loc 1 57 0
+ 134 0022 5860     		str	r0, [r3, #4]
+  58:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	return MS5611_INIT_VALUE;
+ 135              		.loc 1 58 0
+ 136 0024 9860     		str	r0, [r3, #8]
+  60:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 
+ 137              		.loc 1 60 0
+ 138 0026 7047     		bx	lr
+ 139              	.L9:
+ 140              		.align	2
+ 141              	.L8:
+ 142 0028 00000000 		.word	MS5611_SPI_bus_write
+ 143 002c 00000000 		.word	MS5611_SPI_bus_read
+ 144 0030 00000000 		.word	MS5611_SPI_bus_readREG16
+ 145 0034 00000000 		.word	MS5611_SPI_bus_readREG24
+ 146 0038 00000000 		.word	MS5611_delay_msek
+ 147 003c 00000000 		.word	set_filter
+ 148 0040 00000000 		.word	update
+ 149              		.cfi_endproc
+ 150              	.LFE124:
+ 152              		.section	.text.SPI_SendData_MS,"ax",%progbits
+ 153              		.align	1
+ 154              		.global	SPI_SendData_MS
+ 155              		.syntax unified
+ 156              		.thumb
+ 157              		.thumb_func
+ 158              		.fpu fpv4-sp-d16
+ 160              	SPI_SendData_MS:
+ 161              	.LFB125:
+  62:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	s32 iError = MS5611_INIT_VALUE;
+ 162              		.loc 1 62 0
+ 163              		.cfi_startproc
+ 164              		@ args = 0, pretend = 0, frame = 0
+ 165              		@ frame_needed = 0, uses_anonymous_args = 0
+ 166              	.LVL10:
+ 167 0000 F8B5     		push	{r3, r4, r5, r6, r7, lr}
+ 168              	.LCFI3:
+ 169              		.cfi_def_cfa_offset 24
+ 170              		.cfi_offset 3, -24
+ 171              		.cfi_offset 4, -20
+ 172              		.cfi_offset 5, -16
+ 173              		.cfi_offset 6, -12
+ 174              		.cfi_offset 7, -8
+ 175              		.cfi_offset 14, -4
+ 176 0002 0446     		mov	r4, r0
+ 177 0004 0D46     		mov	r5, r1
+ 178 0006 1646     		mov	r6, r2
+ 179 0008 1F46     		mov	r7, r3
+ 180              	.LVL11:
+  64:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	iError = HAL_SPI_Transmit(&hspi2, data, size, timeout);
+ARM GAS  C:\Users\ALEXSN~1\AppData\Local\Temp\ccfM6P3b.s 			page 8
+
+
+ 181              		.loc 1 64 0
+ 182 000a 0022     		movs	r2, #0
+ 183              	.LVL12:
+ 184 000c 0146     		mov	r1, r0
+ 185              	.LVL13:
+ 186 000e 0B48     		ldr	r0, .L13
+ 187              	.LVL14:
+ 188 0010 FFF7FEFF 		bl	HAL_GPIO_WritePin
+ 189              	.LVL15:
+  65:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	while (HAL_SPI_GetState(&hspi2) == HAL_SPI_STATE_BUSY);
+ 190              		.loc 1 65 0
+ 191 0014 3B46     		mov	r3, r7
+ 192 0016 3246     		mov	r2, r6
+ 193 0018 2946     		mov	r1, r5
+ 194 001a 0948     		ldr	r0, .L13+4
+ 195 001c FFF7FEFF 		bl	HAL_SPI_Transmit
+ 196              	.LVL16:
+ 197 0020 0546     		mov	r5, r0
+ 198              	.LVL17:
+ 199              	.L11:
+  66:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	HAL_GPIO_WritePin(GPIOC, gpio_pin, GPIO_PIN_SET);
+ 200              		.loc 1 66 0 discriminator 1
+ 201 0022 0748     		ldr	r0, .L13+4
+ 202 0024 FFF7FEFF 		bl	HAL_SPI_GetState
+ 203              	.LVL18:
+ 204 0028 0228     		cmp	r0, #2
+ 205 002a FAD0     		beq	.L11
+  67:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	return (s8) iError;
+ 206              		.loc 1 67 0
+ 207 002c 0122     		movs	r2, #1
+ 208 002e 2146     		mov	r1, r4
+ 209 0030 0248     		ldr	r0, .L13
+ 210 0032 FFF7FEFF 		bl	HAL_GPIO_WritePin
+ 211              	.LVL19:
+  69:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 
+ 212              		.loc 1 69 0
+ 213 0036 68B2     		sxtb	r0, r5
+ 214 0038 F8BD     		pop	{r3, r4, r5, r6, r7, pc}
+ 215              	.LVL20:
+ 216              	.L14:
+ 217 003a 00BF     		.align	2
+ 218              	.L13:
+ 219 003c 00080240 		.word	1073874944
+ 220 0040 00000000 		.word	hspi2
+ 221              		.cfi_endproc
+ 222              	.LFE125:
+ 224              		.section	.text.MS5611_SPI_bus_write,"ax",%progbits
+ 225              		.align	1
+ 226              		.global	MS5611_SPI_bus_write
+ 227              		.syntax unified
+ 228              		.thumb
+ 229              		.thumb_func
+ 230              		.fpu fpv4-sp-d16
+ 232              	MS5611_SPI_bus_write:
+ 233              	.LFB132:
+ 180:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	s32 iError = MS5611_INIT_VALUE;
+ 234              		.loc 1 180 0
+ARM GAS  C:\Users\ALEXSN~1\AppData\Local\Temp\ccfM6P3b.s 			page 9
+
+
+ 235              		.cfi_startproc
+ 236              		@ args = 0, pretend = 0, frame = 16
+ 237              		@ frame_needed = 0, uses_anonymous_args = 0
+ 238              	.LVL21:
+ 239 0000 F0B5     		push	{r4, r5, r6, r7, lr}
+ 240              	.LCFI4:
+ 241              		.cfi_def_cfa_offset 20
+ 242              		.cfi_offset 4, -20
+ 243              		.cfi_offset 5, -16
+ 244              		.cfi_offset 6, -12
+ 245              		.cfi_offset 7, -8
+ 246              		.cfi_offset 14, -4
+ 247 0002 85B0     		sub	sp, sp, #20
+ 248              	.LCFI5:
+ 249              		.cfi_def_cfa_offset 40
+ 250              	.LVL22:
+ 185:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 		/* the operation of (reg_addr++)&0x7F done:
+ 251              		.loc 1 185 0
+ 252 0004 0024     		movs	r4, #0
+ 253 0006 10E0     		b	.L16
+ 254              	.LVL23:
+ 255              	.L17:
+ 190:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 		BMA2x2_SPI_BUS_WRITE_CONTROL_BYTE;
+ 256              		.loc 1 190 0 discriminator 3
+ 257 0008 6500     		lsls	r5, r4, #1
+ 258 000a 4E1C     		adds	r6, r1, #1
+ 259              	.LVL24:
+ 260 000c 01F07F01 		and	r1, r1, #127
+ 261 0010 04AF     		add	r7, sp, #16
+ 262 0012 2F44     		add	r7, r7, r5
+ 263 0014 07F80C1C 		strb	r1, [r7, #-12]
+ 192:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 				+ stringpos);
+ 264              		.loc 1 192 0 discriminator 3
+ 265 0018 0135     		adds	r5, r5, #1
+ 266 001a 115D     		ldrb	r1, [r2, r4]	@ zero_extendqisi2
+ 267 001c 04AF     		add	r7, sp, #16
+ 268 001e 3D44     		add	r5, r5, r7
+ 269 0020 05F80C1C 		strb	r1, [r5, #-12]
+ 185:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 		/* the operation of (reg_addr++)&0x7F done:
+ 270              		.loc 1 185 0 discriminator 3
+ 271 0024 0134     		adds	r4, r4, #1
+ 272              	.LVL25:
+ 273 0026 E4B2     		uxtb	r4, r4
+ 274              	.LVL26:
+ 190:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 		BMA2x2_SPI_BUS_WRITE_CONTROL_BYTE;
+ 275              		.loc 1 190 0 discriminator 3
+ 276 0028 F1B2     		uxtb	r1, r6
+ 277              	.LVL27:
+ 278              	.L16:
+ 185:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 		/* the operation of (reg_addr++)&0x7F done:
+ 279              		.loc 1 185 0 discriminator 1
+ 280 002a 9C42     		cmp	r4, r3
+ 281 002c ECD3     		bcc	.L17
+ 205:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 
+ 282              		.loc 1 205 0
+ 283 002e 5A00     		lsls	r2, r3, #1
+ 284              	.LVL28:
+ARM GAS  C:\Users\ALEXSN~1\AppData\Local\Temp\ccfM6P3b.s 			page 10
+
+
+ 285 0030 4FF0FF33 		mov	r3, #-1
+ 286              	.LVL29:
+ 287 0034 02F0FE02 		and	r2, r2, #254
+ 288 0038 01A9     		add	r1, sp, #4
+ 289              	.LVL30:
+ 290 003a FFF7FEFF 		bl	SPI_SendData_MS
+ 291              	.LVL31:
+ 208:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 
+ 292              		.loc 1 208 0
+ 293 003e 05B0     		add	sp, sp, #20
+ 294              	.LCFI6:
+ 295              		.cfi_def_cfa_offset 20
+ 296              		@ sp needed
+ 297 0040 F0BD     		pop	{r4, r5, r6, r7, pc}
+ 298              		.cfi_endproc
+ 299              	.LFE132:
+ 301              		.section	.text.SPI_ReadData_MS,"ax",%progbits
+ 302              		.align	1
+ 303              		.global	SPI_ReadData_MS
+ 304              		.syntax unified
+ 305              		.thumb
+ 306              		.thumb_func
+ 307              		.fpu fpv4-sp-d16
+ 309              	SPI_ReadData_MS:
+ 310              	.LFB126:
+  71:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 
+ 311              		.loc 1 71 0
+ 312              		.cfi_startproc
+ 313              		@ args = 0, pretend = 0, frame = 0
+ 314              		@ frame_needed = 0, uses_anonymous_args = 0
+ 315              	.LVL32:
+ 316 0000 F8B5     		push	{r3, r4, r5, r6, r7, lr}
+ 317              	.LCFI7:
+ 318              		.cfi_def_cfa_offset 24
+ 319              		.cfi_offset 3, -24
+ 320              		.cfi_offset 4, -20
+ 321              		.cfi_offset 5, -16
+ 322              		.cfi_offset 6, -12
+ 323              		.cfi_offset 7, -8
+ 324              		.cfi_offset 14, -4
+ 325 0002 0446     		mov	r4, r0
+ 326 0004 0D46     		mov	r5, r1
+ 327 0006 1646     		mov	r6, r2
+ 328 0008 1F46     		mov	r7, r3
+ 329              	.LVL33:
+  74:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	iError = HAL_SPI_Receive(&hspi2, data, size, timeout);
+ 330              		.loc 1 74 0
+ 331 000a 0022     		movs	r2, #0
+ 332              	.LVL34:
+ 333 000c 0146     		mov	r1, r0
+ 334              	.LVL35:
+ 335 000e 0B48     		ldr	r0, .L22
+ 336              	.LVL36:
+ 337 0010 FFF7FEFF 		bl	HAL_GPIO_WritePin
+ 338              	.LVL37:
+  75:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	while (HAL_SPI_GetState(&hspi2) == HAL_SPI_STATE_BUSY)
+ 339              		.loc 1 75 0
+ARM GAS  C:\Users\ALEXSN~1\AppData\Local\Temp\ccfM6P3b.s 			page 11
+
+
+ 340 0014 3B46     		mov	r3, r7
+ 341 0016 3246     		mov	r2, r6
+ 342 0018 2946     		mov	r1, r5
+ 343 001a 0948     		ldr	r0, .L22+4
+ 344 001c FFF7FEFF 		bl	HAL_SPI_Receive
+ 345              	.LVL38:
+ 346 0020 0546     		mov	r5, r0
+ 347              	.LVL39:
+ 348              	.L20:
+  76:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 		;
+ 349              		.loc 1 76 0 discriminator 1
+ 350 0022 0748     		ldr	r0, .L22+4
+ 351 0024 FFF7FEFF 		bl	HAL_SPI_GetState
+ 352              	.LVL40:
+ 353 0028 0228     		cmp	r0, #2
+ 354 002a FAD0     		beq	.L20
+  78:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	return (s8) iError;
+ 355              		.loc 1 78 0
+ 356 002c 0122     		movs	r2, #1
+ 357 002e 2146     		mov	r1, r4
+ 358 0030 0248     		ldr	r0, .L22
+ 359 0032 FFF7FEFF 		bl	HAL_GPIO_WritePin
+ 360              	.LVL41:
+  80:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 
+ 361              		.loc 1 80 0
+ 362 0036 68B2     		sxtb	r0, r5
+ 363 0038 F8BD     		pop	{r3, r4, r5, r6, r7, pc}
+ 364              	.LVL42:
+ 365              	.L23:
+ 366 003a 00BF     		.align	2
+ 367              	.L22:
+ 368 003c 00080240 		.word	1073874944
+ 369 0040 00000000 		.word	hspi2
+ 370              		.cfi_endproc
+ 371              	.LFE126:
+ 373              		.section	.text.MS5611_SPI_bus_read,"ax",%progbits
+ 374              		.align	1
+ 375              		.global	MS5611_SPI_bus_read
+ 376              		.syntax unified
+ 377              		.thumb
+ 378              		.thumb_func
+ 379              		.fpu fpv4-sp-d16
+ 381              	MS5611_SPI_bus_read:
+ 382              	.LFB129:
+ 105:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	s32 iError = MS5611_INIT_VALUE;
+ 383              		.loc 1 105 0
+ 384              		.cfi_startproc
+ 385              		@ args = 0, pretend = 0, frame = 8
+ 386              		@ frame_needed = 0, uses_anonymous_args = 0
+ 387              	.LVL43:
+ 388 0000 70B5     		push	{r4, r5, r6, lr}
+ 389              	.LCFI8:
+ 390              		.cfi_def_cfa_offset 16
+ 391              		.cfi_offset 4, -16
+ 392              		.cfi_offset 5, -12
+ 393              		.cfi_offset 6, -8
+ 394              		.cfi_offset 14, -4
+ARM GAS  C:\Users\ALEXSN~1\AppData\Local\Temp\ccfM6P3b.s 			page 12
+
+
+ 395 0002 82B0     		sub	sp, sp, #8
+ 396              	.LCFI9:
+ 397              		.cfi_def_cfa_offset 24
+ 398 0004 1646     		mov	r6, r2
+ 399 0006 1D46     		mov	r5, r3
+ 400              	.LVL44:
+ 107:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	u8 stringpos;
+ 401              		.loc 1 107 0
+ 402 0008 0024     		movs	r4, #0
+ 403 000a 8DF80440 		strb	r4, [sp, #4]
+ 109:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	/*	For the SPI mode only 7 bits of register addresses are used.
+ 404              		.loc 1 109 0
+ 405 000e 0094     		str	r4, [sp]
+ 113:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	/*read routine is initiated register address is mask with 0x80*/
+ 406              		.loc 1 113 0
+ 407 0010 61F07F01 		orn	r1, r1, #127
+ 408              	.LVL45:
+ 409 0014 8DF80010 		strb	r1, [sp]
+ 115:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	/*
+ 410              		.loc 1 115 0
+ 411 0018 5A1C     		adds	r2, r3, #1
+ 412              	.LVL46:
+ 413 001a 4FF0FF33 		mov	r3, #-1
+ 414              	.LVL47:
+ 415 001e D2B2     		uxtb	r2, r2
+ 416 0020 6946     		mov	r1, sp
+ 417 0022 FFF7FEFF 		bl	SPI_ReadData_MS
+ 418              	.LVL48:
+ 132:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 		*(reg_data + stringpos) = array[stringpos +
+ 419              		.loc 1 132 0
+ 420 0026 2346     		mov	r3, r4
+ 421 0028 06E0     		b	.L25
+ 422              	.LVL49:
+ 423              	.L26:
+ 133:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 		BMA2x2_BUS_READ_WRITE_ARRAY_INDEX];
+ 424              		.loc 1 133 0 discriminator 3
+ 425 002a 5A1C     		adds	r2, r3, #1
+ 426 002c 02A9     		add	r1, sp, #8
+ 427 002e 1144     		add	r1, r1, r2
+ 428 0030 11F8081C 		ldrb	r1, [r1, #-8]	@ zero_extendqisi2
+ 429 0034 F154     		strb	r1, [r6, r3]
+ 132:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 		*(reg_data + stringpos) = array[stringpos +
+ 430              		.loc 1 132 0 discriminator 3
+ 431 0036 D3B2     		uxtb	r3, r2
+ 432              	.LVL50:
+ 433              	.L25:
+ 132:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 		*(reg_data + stringpos) = array[stringpos +
+ 434              		.loc 1 132 0 is_stmt 0 discriminator 1
+ 435 0038 AB42     		cmp	r3, r5
+ 436 003a F6D3     		bcc	.L26
+ 137:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 
+ 437              		.loc 1 137 0 is_stmt 1
+ 438 003c 02B0     		add	sp, sp, #8
+ 439              	.LCFI10:
+ 440              		.cfi_def_cfa_offset 16
+ 441              		@ sp needed
+ 442 003e 70BD     		pop	{r4, r5, r6, pc}
+ARM GAS  C:\Users\ALEXSN~1\AppData\Local\Temp\ccfM6P3b.s 			page 13
+
+
+ 443              		.cfi_endproc
+ 444              	.LFE129:
+ 446              		.section	.text.SPI_ReadData_MSREG16,"ax",%progbits
+ 447              		.align	1
+ 448              		.global	SPI_ReadData_MSREG16
+ 449              		.syntax unified
+ 450              		.thumb
+ 451              		.thumb_func
+ 452              		.fpu fpv4-sp-d16
+ 454              	SPI_ReadData_MSREG16:
+ 455              	.LFB127:
+  82:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	u8 b0, b1;
+ 456              		.loc 1 82 0
+ 457              		.cfi_startproc
+ 458              		@ args = 0, pretend = 0, frame = 0
+ 459              		@ frame_needed = 0, uses_anonymous_args = 0
+ 460              	.LVL51:
+ 461 0000 F8B5     		push	{r3, r4, r5, r6, r7, lr}
+ 462              	.LCFI11:
+ 463              		.cfi_def_cfa_offset 24
+ 464              		.cfi_offset 3, -24
+ 465              		.cfi_offset 4, -20
+ 466              		.cfi_offset 5, -16
+ 467              		.cfi_offset 6, -12
+ 468              		.cfi_offset 7, -8
+ 469              		.cfi_offset 14, -4
+ 470 0002 0646     		mov	r6, r0
+ 471 0004 0C46     		mov	r4, r1
+ 472              	.LVL52:
+  85:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	transfer(addr);
+ 473              		.loc 1 85 0
+ 474 0006 0D4D     		ldr	r5, .L30
+ 475 0008 0022     		movs	r2, #0
+ 476 000a 0146     		mov	r1, r0
+ 477              	.LVL53:
+ 478 000c 2846     		mov	r0, r5
+ 479              	.LVL54:
+ 480 000e FFF7FEFF 		bl	HAL_GPIO_WritePin
+ 481              	.LVL55:
+  86:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	b1 = transfer(0);
+ 482              		.loc 1 86 0
+ 483 0012 2046     		mov	r0, r4
+ 484 0014 FFF7FEFF 		bl	transfer
+ 485              	.LVL56:
+  87:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	b0 = transfer(0);
+ 486              		.loc 1 87 0
+ 487 0018 0020     		movs	r0, #0
+ 488 001a FFF7FEFF 		bl	transfer
+ 489              	.LVL57:
+ 490 001e 0746     		mov	r7, r0
+ 491              	.LVL58:
+  88:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	HAL_GPIO_WritePin(GPIOC, gpio_pin, GPIO_PIN_SET);
+ 492              		.loc 1 88 0
+ 493 0020 0020     		movs	r0, #0
+ 494 0022 FFF7FEFF 		bl	transfer
+ 495              	.LVL59:
+ 496 0026 C4B2     		uxtb	r4, r0
+ARM GAS  C:\Users\ALEXSN~1\AppData\Local\Temp\ccfM6P3b.s 			page 14
+
+
+ 497              	.LVL60:
+  89:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	return (((u16) b1 << 8) | b0);
+ 498              		.loc 1 89 0
+ 499 0028 0122     		movs	r2, #1
+ 500 002a 3146     		mov	r1, r6
+ 501 002c 2846     		mov	r0, r5
+ 502 002e FFF7FEFF 		bl	HAL_GPIO_WritePin
+ 503              	.LVL61:
+  90:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 
+ 504              		.loc 1 90 0
+ 505 0032 44EA0720 		orr	r0, r4, r7, lsl #8
+  92:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 
+ 506              		.loc 1 92 0
+ 507 0036 80B2     		uxth	r0, r0
+ 508 0038 F8BD     		pop	{r3, r4, r5, r6, r7, pc}
+ 509              	.LVL62:
+ 510              	.L31:
+ 511 003a 00BF     		.align	2
+ 512              	.L30:
+ 513 003c 00080240 		.word	1073874944
+ 514              		.cfi_endproc
+ 515              	.LFE127:
+ 517              		.section	.text.SPI_ReadData_MSREG24,"ax",%progbits
+ 518              		.align	1
+ 519              		.global	SPI_ReadData_MSREG24
+ 520              		.syntax unified
+ 521              		.thumb
+ 522              		.thumb_func
+ 523              		.fpu fpv4-sp-d16
+ 525              	SPI_ReadData_MSREG24:
+ 526              	.LFB128:
+  94:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	u8 b0, b1, b2;
+ 527              		.loc 1 94 0
+ 528              		.cfi_startproc
+ 529              		@ args = 0, pretend = 0, frame = 0
+ 530              		@ frame_needed = 0, uses_anonymous_args = 0
+ 531              	.LVL63:
+ 532 0000 2DE9F041 		push	{r4, r5, r6, r7, r8, lr}
+ 533              	.LCFI12:
+ 534              		.cfi_def_cfa_offset 24
+ 535              		.cfi_offset 4, -24
+ 536              		.cfi_offset 5, -20
+ 537              		.cfi_offset 6, -16
+ 538              		.cfi_offset 7, -12
+ 539              		.cfi_offset 8, -8
+ 540              		.cfi_offset 14, -4
+ 541 0004 8046     		mov	r8, r0
+  96:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	transfer(0x00);
+ 542              		.loc 1 96 0
+ 543 0006 124F     		ldr	r7, .L34
+ 544 0008 0022     		movs	r2, #0
+ 545              	.LVL64:
+ 546 000a 0146     		mov	r1, r0
+ 547              	.LVL65:
+ 548 000c 3846     		mov	r0, r7
+ 549              	.LVL66:
+ 550 000e FFF7FEFF 		bl	HAL_GPIO_WritePin
+ARM GAS  C:\Users\ALEXSN~1\AppData\Local\Temp\ccfM6P3b.s 			page 15
+
+
+ 551              	.LVL67:
+  97:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	b2 = transfer(0);
+ 552              		.loc 1 97 0
+ 553 0012 0020     		movs	r0, #0
+ 554 0014 FFF7FEFF 		bl	transfer
+ 555              	.LVL68:
+  98:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	b1 = transfer(0);
+ 556              		.loc 1 98 0
+ 557 0018 0020     		movs	r0, #0
+ 558 001a FFF7FEFF 		bl	transfer
+ 559              	.LVL69:
+ 560 001e 0446     		mov	r4, r0
+ 561              	.LVL70:
+  99:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	b0 = transfer(0);
+ 562              		.loc 1 99 0
+ 563 0020 0020     		movs	r0, #0
+ 564 0022 FFF7FEFF 		bl	transfer
+ 565              	.LVL71:
+ 566 0026 0546     		mov	r5, r0
+ 567              	.LVL72:
+ 100:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	HAL_GPIO_WritePin(GPIOC, gpio_pin, GPIO_PIN_SET);
+ 568              		.loc 1 100 0
+ 569 0028 0020     		movs	r0, #0
+ 570 002a FFF7FEFF 		bl	transfer
+ 571              	.LVL73:
+ 572 002e 0646     		mov	r6, r0
+ 573              	.LVL74:
+ 101:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	return (((u32) b2) << 16) | (((u32) b1) << 8) | (b0);
+ 574              		.loc 1 101 0
+ 575 0030 0122     		movs	r2, #1
+ 576 0032 4146     		mov	r1, r8
+ 577 0034 3846     		mov	r0, r7
+ 578 0036 FFF7FEFF 		bl	HAL_GPIO_WritePin
+ 579              	.LVL75:
+ 102:Drivers/Perepheral_drivers/Src/ms5611_support.c **** }
+ 580              		.loc 1 102 0
+ 581 003a 2404     		lsls	r4, r4, #16
+ 582              	.LVL76:
+ 583 003c 04F47F04 		and	r4, r4, #16711680
+ 584 0040 2D02     		lsls	r5, r5, #8
+ 585              	.LVL77:
+ 586 0042 ADB2     		uxth	r5, r5
+ 587 0044 2C43     		orrs	r4, r4, r5
+ 588 0046 F0B2     		uxtb	r0, r6
+ 103:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 
+ 589              		.loc 1 103 0
+ 590 0048 2043     		orrs	r0, r0, r4
+ 591 004a BDE8F081 		pop	{r4, r5, r6, r7, r8, pc}
+ 592              	.LVL78:
+ 593              	.L35:
+ 594 004e 00BF     		.align	2
+ 595              	.L34:
+ 596 0050 00080240 		.word	1073874944
+ 597              		.cfi_endproc
+ 598              	.LFE128:
+ 600              		.section	.text.MS5611_SPI_bus_readREG24,"ax",%progbits
+ 601              		.align	1
+ARM GAS  C:\Users\ALEXSN~1\AppData\Local\Temp\ccfM6P3b.s 			page 16
+
+
+ 602              		.global	MS5611_SPI_bus_readREG24
+ 603              		.syntax unified
+ 604              		.thumb
+ 605              		.thumb_func
+ 606              		.fpu fpv4-sp-d16
+ 608              	MS5611_SPI_bus_readREG24:
+ 609              	.LFB131:
+ 159:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	u32 result = *reg_data;
+ 610              		.loc 1 159 0
+ 611              		.cfi_startproc
+ 612              		@ args = 0, pretend = 0, frame = 8
+ 613              		@ frame_needed = 0, uses_anonymous_args = 0
+ 614              	.LVL79:
+ 615 0000 10B5     		push	{r4, lr}
+ 616              	.LCFI13:
+ 617              		.cfi_def_cfa_offset 8
+ 618              		.cfi_offset 4, -8
+ 619              		.cfi_offset 14, -4
+ 620 0002 82B0     		sub	sp, sp, #8
+ 621              	.LCFI14:
+ 622              		.cfi_def_cfa_offset 16
+ 623 0004 1446     		mov	r4, r2
+ 624              	.LVL80:
+ 162:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	memset(array, 0, SPI_BUFFER_LEN - 1);
+ 625              		.loc 1 162 0
+ 626 0006 0022     		movs	r2, #0
+ 627              	.LVL81:
+ 628 0008 8DF80420 		strb	r2, [sp, #4]
+ 629              	.LVL82:
+ 163:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 
+ 630              		.loc 1 163 0
+ 631 000c 0092     		str	r2, [sp]
+ 165:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	result = SPI_ReadData_MSREG24(dev_addr, (u8*)&array, cnt + 1, HAL_MAX_DELAY); //!result = SPI_Read
+ 632              		.loc 1 165 0
+ 633 000e 8DF80010 		strb	r1, [sp]
+ 166:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	*reg_data = result;
+ 634              		.loc 1 166 0
+ 635 0012 5A1C     		adds	r2, r3, #1
+ 636 0014 4FF0FF33 		mov	r3, #-1
+ 637              	.LVL83:
+ 638 0018 D2B2     		uxtb	r2, r2
+ 639 001a 6946     		mov	r1, sp
+ 640              	.LVL84:
+ 641 001c FFF7FEFF 		bl	SPI_ReadData_MSREG24
+ 642              	.LVL85:
+ 167:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	return result;
+ 643              		.loc 1 167 0
+ 644 0020 2060     		str	r0, [r4]
+ 169:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 
+ 645              		.loc 1 169 0
+ 646 0022 02B0     		add	sp, sp, #8
+ 647              	.LCFI15:
+ 648              		.cfi_def_cfa_offset 8
+ 649              		@ sp needed
+ 650 0024 10BD     		pop	{r4, pc}
+ 651              		.cfi_endproc
+ 652              	.LFE131:
+ARM GAS  C:\Users\ALEXSN~1\AppData\Local\Temp\ccfM6P3b.s 			page 17
+
+
+ 654              		.section	.text.ms5611_spi_init,"ax",%progbits
+ 655              		.align	1
+ 656              		.global	ms5611_spi_init
+ 657              		.syntax unified
+ 658              		.thumb
+ 659              		.thumb_func
+ 660              		.fpu fpv4-sp-d16
+ 662              	ms5611_spi_init:
+ 663              	.LFB134:
+ 213:Drivers/Perepheral_drivers/Src/ms5611_support.c **** }
+ 214:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 
+ 215:Drivers/Perepheral_drivers/Src/ms5611_support.c **** MS5611_RETURN_FUNCTION_TYPE ms5611_spi_init(struct ms5611_t *ms5611,
+ 216:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 		uint16_t GPIO_Pin) {
+ 664              		.loc 1 216 0
+ 665              		.cfi_startproc
+ 666              		@ args = 0, pretend = 0, frame = 0
+ 667              		@ frame_needed = 0, uses_anonymous_args = 0
+ 668              	.LVL86:
+ 669 0000 10B5     		push	{r4, lr}
+ 670              	.LCFI16:
+ 671              		.cfi_def_cfa_offset 8
+ 672              		.cfi_offset 4, -8
+ 673              		.cfi_offset 14, -4
+ 674 0002 0446     		mov	r4, r0
+ 675              	.LVL87:
+ 217:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 
+ 218:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	MS5611_RETURN_FUNCTION_TYPE com_rslt = ERROR;
+ 219:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	ms5611->dev_addr = GPIO_Pin;
+ 676              		.loc 1 219 0
+ 677 0004 0183     		strh	r1, [r0, #24]	@ movhi
+ 220:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 
+ 221:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	SPI_routine_MS5611(ms5611);
+ 678              		.loc 1 221 0
+ 679 0006 FFF7FEFF 		bl	SPI_routine_MS5611
+ 680              	.LVL88:
+ 222:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	com_rslt = MS561101BA_Init(ms5611);
+ 681              		.loc 1 222 0
+ 682 000a 2046     		mov	r0, r4
+ 683 000c FFF7FEFF 		bl	MS561101BA_Init
+ 684              	.LVL89:
+ 223:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	return com_rslt;
+ 224:Drivers/Perepheral_drivers/Src/ms5611_support.c **** }
+ 685              		.loc 1 224 0
+ 686 0010 40B2     		sxtb	r0, r0
+ 687 0012 10BD     		pop	{r4, pc}
+ 688              		.cfi_endproc
+ 689              	.LFE134:
+ 691              		.section	.text.ms5611_data_readout,"ax",%progbits
+ 692              		.align	1
+ 693              		.global	ms5611_data_readout
+ 694              		.syntax unified
+ 695              		.thumb
+ 696              		.thumb_func
+ 697              		.fpu fpv4-sp-d16
+ 699              	ms5611_data_readout:
+ 700              	.LFB135:
+ 225:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 
+ARM GAS  C:\Users\ALEXSN~1\AppData\Local\Temp\ccfM6P3b.s 			page 18
+
+
+ 226:Drivers/Perepheral_drivers/Src/ms5611_support.c **** s32 ms5611_data_readout(float *altitude_out, float *air_pressure_out) {
+ 701              		.loc 1 226 0
+ 702              		.cfi_startproc
+ 703              		@ args = 0, pretend = 0, frame = 0
+ 704              		@ frame_needed = 0, uses_anonymous_args = 0
+ 705              	.LVL90:
+ 706 0000 38B5     		push	{r3, r4, r5, lr}
+ 707              	.LCFI17:
+ 708              		.cfi_def_cfa_offset 16
+ 709              		.cfi_offset 3, -16
+ 710              		.cfi_offset 4, -12
+ 711              		.cfi_offset 5, -8
+ 712              		.cfi_offset 14, -4
+ 713 0002 0546     		mov	r5, r0
+ 714 0004 0C46     		mov	r4, r1
+ 227:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	update();
+ 715              		.loc 1 227 0
+ 716 0006 FFF7FEFF 		bl	update
+ 717              	.LVL91:
+ 228:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	*altitude_out = altitude;
+ 718              		.loc 1 228 0
+ 719 000a 044B     		ldr	r3, .L42
+ 720 000c 1B68     		ldr	r3, [r3]	@ float
+ 721 000e 2B60     		str	r3, [r5]	@ float
+ 229:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	*air_pressure_out = air_pressure;
+ 722              		.loc 1 229 0
+ 723 0010 034B     		ldr	r3, .L42+4
+ 724 0012 1B68     		ldr	r3, [r3]	@ float
+ 725 0014 2360     		str	r3, [r4]	@ float
+ 230:Drivers/Perepheral_drivers/Src/ms5611_support.c **** 	return 0;
+ 231:Drivers/Perepheral_drivers/Src/ms5611_support.c **** }
+ 726              		.loc 1 231 0
+ 727 0016 0020     		movs	r0, #0
+ 728 0018 38BD     		pop	{r3, r4, r5, pc}
+ 729              	.LVL92:
+ 730              	.L43:
+ 731 001a 00BF     		.align	2
+ 732              	.L42:
+ 733 001c 00000000 		.word	altitude
+ 734 0020 00000000 		.word	air_pressure
+ 735              		.cfi_endproc
+ 736              	.LFE135:
+ 738              		.text
+ 739              	.Letext0:
+ 740              		.file 2 "c:\\program files\\gcc-arm-none-eabi-6-2017-q2-update-win32\\arm-none-eabi\\include\\mach
+ 741              		.file 3 "c:\\program files\\gcc-arm-none-eabi-6-2017-q2-update-win32\\arm-none-eabi\\include\\sys\
+ 742              		.file 4 "Drivers/CMSIS/Include/core_cm4.h"
+ 743              		.file 5 "Drivers/CMSIS/Device/ST/STM32F4xx/Include/system_stm32f4xx.h"
+ 744              		.file 6 "Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f405xx.h"
+ 745              		.file 7 "c:\\program files\\gcc-arm-none-eabi-6-2017-q2-update-win32\\arm-none-eabi\\include\\sys\
+ 746              		.file 8 "c:\\program files\\gcc-arm-none-eabi-6-2017-q2-update-win32\\arm-none-eabi\\include\\sys\
+ 747              		.file 9 "c:\\program files\\gcc-arm-none-eabi-6-2017-q2-update-win32\\lib\\gcc\\arm-none-eabi\\6.3
+ 748              		.file 10 "c:\\program files\\gcc-arm-none-eabi-6-2017-q2-update-win32\\arm-none-eabi\\include\\sys
+ 749              		.file 11 "Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f4xx.h"
+ 750              		.file 12 "Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_def.h"
+ 751              		.file 13 "Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_gpio.h"
+ 752              		.file 14 "Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_dma.h"
+ARM GAS  C:\Users\ALEXSN~1\AppData\Local\Temp\ccfM6P3b.s 			page 19
+
+
+ 753              		.file 15 "Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_spi.h"
+ 754              		.file 16 "Inc/types.h"
+ 755              		.file 17 "Inc/../Drivers/Perepheral_drivers/Inc/baro_ms5611.h"
+ 756              		.file 18 "Inc/../Drivers/Perepheral_drivers/Inc/bma2x2.h"
+ 757              		.file 19 "Inc/../Drivers/Perepheral_drivers/Inc/bme280.h"
+ 758              		.file 20 "Inc/../Drivers/Perepheral_drivers/Inc/bmg160.h"
+ 759              		.file 21 "Inc/../Drivers/Perepheral_drivers/Inc/bmm050.h"
+ 760              		.file 22 "Inc/includes.h"
+ 761              		.file 23 "c:\\workspace\\senseairnew\\drivers\\perepheral_drivers\\inc\\ms5611.h"
+ 762              		.file 24 "c:\\program files\\gcc-arm-none-eabi-6-2017-q2-update-win32\\arm-none-eabi\\include\\mat
+ 763              		.file 25 "Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal.h"
+ARM GAS  C:\Users\ALEXSN~1\AppData\Local\Temp\ccfM6P3b.s 			page 20
+
+
+DEFINED SYMBOLS
+                            *ABS*:00000000 ms5611_support.c
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccfM6P3b.s:18     .text.MS5611_SPI_bus_readREG16:00000000 $t
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccfM6P3b.s:25     .text.MS5611_SPI_bus_readREG16:00000000 MS5611_SPI_bus_readREG16
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccfM6P3b.s:65     .text.MS5611_delay_msek:00000000 $t
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccfM6P3b.s:72     .text.MS5611_delay_msek:00000000 MS5611_delay_msek
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccfM6P3b.s:92     .text.SPI_routine_MS5611:00000000 $t
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccfM6P3b.s:99     .text.SPI_routine_MS5611:00000000 SPI_routine_MS5611
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccfM6P3b.s:142    .text.SPI_routine_MS5611:00000028 $d
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccfM6P3b.s:232    .text.MS5611_SPI_bus_write:00000000 MS5611_SPI_bus_write
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccfM6P3b.s:381    .text.MS5611_SPI_bus_read:00000000 MS5611_SPI_bus_read
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccfM6P3b.s:608    .text.MS5611_SPI_bus_readREG24:00000000 MS5611_SPI_bus_readREG24
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccfM6P3b.s:153    .text.SPI_SendData_MS:00000000 $t
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccfM6P3b.s:160    .text.SPI_SendData_MS:00000000 SPI_SendData_MS
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccfM6P3b.s:219    .text.SPI_SendData_MS:0000003c $d
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccfM6P3b.s:225    .text.MS5611_SPI_bus_write:00000000 $t
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccfM6P3b.s:302    .text.SPI_ReadData_MS:00000000 $t
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccfM6P3b.s:309    .text.SPI_ReadData_MS:00000000 SPI_ReadData_MS
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccfM6P3b.s:368    .text.SPI_ReadData_MS:0000003c $d
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccfM6P3b.s:374    .text.MS5611_SPI_bus_read:00000000 $t
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccfM6P3b.s:447    .text.SPI_ReadData_MSREG16:00000000 $t
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccfM6P3b.s:454    .text.SPI_ReadData_MSREG16:00000000 SPI_ReadData_MSREG16
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccfM6P3b.s:513    .text.SPI_ReadData_MSREG16:0000003c $d
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccfM6P3b.s:518    .text.SPI_ReadData_MSREG24:00000000 $t
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccfM6P3b.s:525    .text.SPI_ReadData_MSREG24:00000000 SPI_ReadData_MSREG24
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccfM6P3b.s:596    .text.SPI_ReadData_MSREG24:00000050 $d
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccfM6P3b.s:601    .text.MS5611_SPI_bus_readREG24:00000000 $t
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccfM6P3b.s:655    .text.ms5611_spi_init:00000000 $t
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccfM6P3b.s:662    .text.ms5611_spi_init:00000000 ms5611_spi_init
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccfM6P3b.s:692    .text.ms5611_data_readout:00000000 $t
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccfM6P3b.s:699    .text.ms5611_data_readout:00000000 ms5611_data_readout
+C:\Users\ALEXSN~1\AppData\Local\Temp\ccfM6P3b.s:733    .text.ms5611_data_readout:0000001c $d
+                     .debug_frame:00000010 $d
+
+UNDEFINED SYMBOLS
+HAL_Delay
+set_filter
+update
+HAL_GPIO_WritePin
+HAL_SPI_Transmit
+HAL_SPI_GetState
+hspi2
+HAL_SPI_Receive
+transfer
+MS561101BA_Init
+altitude
+air_pressure
